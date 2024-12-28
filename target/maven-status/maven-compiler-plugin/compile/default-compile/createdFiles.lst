@@ -1,0 +1,3 @@
+org\guanzon\cas\inv\warehouse\InventoryRequest.class
+org\guanzon\cas\inv\warehouse\services\InvWarehouseModels.class
+org\guanzon\cas\inv\warehouse\model\Model_Inv_Stock_Request_Master.class
