@@ -88,6 +88,10 @@ public class Model_Inv_Stock_Request_Master extends Model{
         return setValue("sCategrCd", categoryId);
     }
     
+    public String getCategoryId(){
+        return (String) getValue("sCategrCd");
+    }
+    
     public JSONObject setTransactionDate(Date transactionDate){
         return setValue("dTransact", transactionDate);
     }
