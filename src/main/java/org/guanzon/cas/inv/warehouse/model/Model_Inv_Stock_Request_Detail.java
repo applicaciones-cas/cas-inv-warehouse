@@ -6,11 +6,9 @@ import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.InventoryClassification;
-import org.guanzon.appdriver.constant.Logical;
-import org.guanzon.appdriver.constant.TransactionStatus;
 import org.guanzon.cas.inv.model.Model_Inv_Master;
-import org.guanzon.cas.inv.services.InvControllers;
-import org.guanzon.cas.parameter.services.ParamModels;
+import org.guanzon.cas.inv.model.Model_Inventory;
+import org.guanzon.cas.inv.services.InvModels;
 import org.json.simple.JSONObject;
 
 public class Model_Inv_Stock_Request_Detail extends Model{      
@@ -57,7 +55,7 @@ public class Model_Inv_Stock_Request_Detail extends Model{
             ID2 = "nEntryNox";
             
             //initialize reference objects
-            poInvMaster = InvControllers
+            poInvMaster = new InvModels(poGRider).InventoryMaster();
             //end - initialize reference objects
             
             pnEditMode = EditMode.UNKNOWN;
@@ -65,6 +63,11 @@ public class Model_Inv_Stock_Request_Detail extends Model{
             logwrapr.severe(e.getMessage());
             System.exit(1);
         }
+    }
+    
+    @Override
+    public String getNextCode(){
+        return ""; 
     }
     
     public JSONObject setTransactionNo(String transactionNo){
@@ -75,144 +78,148 @@ public class Model_Inv_Stock_Request_Detail extends Model{
         return (String) getValue("sTransNox");
     }
     
-    public JSONObject setBranchCode(String branchCode){
-        return setValue("sBranchCd", branchCode);
+    public JSONObject setEntryNumber(int entryNumber){
+        return setValue("nEntryNox", entryNumber);
     }
     
-    public String getBranchCode(){
-        return (String) getValue("sBranchCd");
+    public String getEntryNumber(){
+        return (String) getValue("nEntryNox");
     }
     
-    public JSONObject setIndustryId(String industryId){
-        return setValue("sIndstCdx", industryId);
+    public JSONObject setStockId(String stockId){
+        return setValue("sStockIDx", stockId);
     }
     
-    public String getIndustryId(){
-        return (String) getValue("sIndstCdx");
+    public String getStockId(){
+        return (String) getValue("sStockIDx");
     }
     
-    public JSONObject setCategoryId(String categoryId){
-        return setValue("sCategrCd", categoryId);
+    public JSONObject setQuantity(int quantity){
+        return setValue("nQuantity", quantity);
     }
     
-    public JSONObject setTransactionDate(Date transactionDate){
-        return setValue("dTransact", transactionDate);
+    public int getQuantity(){
+        return (int) getValue("nQuantity");
     }
     
-    public Date getTransactionDate(){
-        return (Date) getValue("dTransact");
+    public JSONObject setClassification(String classification){
+        return setValue("cClassify", classification);
+    }
+    
+    public String getClassification(){
+        return (String) getValue("cClassify");
     }
         
-    public JSONObject setReferenceNo(String referenceNo){
-        return setValue("sReferNox", referenceNo);
+    public JSONObject setRecommendedOrder(int quantity){
+        return setValue("nRecOrder", quantity);
     }
     
-    public String getReferenceNo(){
-        return (String) getValue("sReferNox");
+    public int getRecommendedOrder(){
+        return (int) getValue("nRecOrder");
     }
     
-    public JSONObject setRemarks(String remarks){
-        return setValue("sRemarksx", remarks);
+    public JSONObject setQuantityOnHand(int quantity){
+        return setValue("nQtyOnHnd", quantity);
     }
     
-    public String getRemarks(){
-        return (String) getValue("sRemarksx");
+    public int getQuantityOnHand(){
+        return (int) getValue("nQtyOnHnd");
     }
     
-    public JSONObject setIssuanceNotes(String issuanceNotes){
-        return setValue("sIssNotes", issuanceNotes);
+    public JSONObject setReservedOrder(int quantity){
+        return setValue("nResvOrdr", quantity);
     }
     
-    public String getIssuanceNotes(){
-        return (String) getValue("sIssNotes");
+    public int getReservedOrder(){
+        return (int) getValue("nResvOrdr");
     }
     
-    public JSONObject setCurrentInventory(int quantity){
-        return setValue("nCurrInvx", quantity);
+    public JSONObject setBackOrder(int quantity){
+        return setValue("nBackOrdr", quantity);
     }
     
-    public int getCurrentInventory(){
-        return (int) getValue("nCurrInvx");
+    public int getBackOrder(){
+        return (int) getValue("nBackOrdr");
     }
     
-    public JSONObject setEstimateInventory(int quantity){
-        return setValue("nEstInvxx", quantity);
+    public JSONObject setOnTransit(int quantity){
+        return setValue("nOnTranst", quantity);
     }
     
-    public int getEstimateInventory(){
-        return (int) getValue("nEstInvxx");
+    public int getOnTransit(){
+        return (int) getValue("nOnTranst");
     }
     
-    public JSONObject setApproverId(String approverId){
-        return setValue("sApproved", approverId);
+    public JSONObject setAverageMonthlySale(int quantity){
+        return setValue("nAvgMonSl", quantity);
     }
     
-    public String getApproverId(){
-        return (String) getValue("sApproved");
+    public int getAverageMonthlySale(){
+        return (int) getValue("nAvgMonSl");
     }
     
-    public JSONObject setApprovalDate(Date approvalDate){
-        return setValue("dApproved", approvalDate);
+    public JSONObject setMaxLevel(int quantity){
+        return setValue("nMaxLevel", quantity);
     }
     
-    public Date getApprovalDate(){
-        return (Date) getValue("dApproved");
+    public int getMaxLevel(){
+        return (int) getValue("nMaxLevel");
     }
     
-    public JSONObject setApprovalCode(String approvalCode){
-        return setValue("sAprvCode", approvalCode);
+    public JSONObject setApproved(int quantity){
+        return setValue("nApproved", quantity);
     }
     
-    public String getApprovalCode(){
-        return (String) getValue("sAprvCode");
+    public int getApproved(){
+        return (int) getValue("nApproved");
     }
     
-    public JSONObject setEntryNo(int rows){
-        return setValue("nEntryNox", rows);
+    public JSONObject setCancelled(int quantity){
+        return setValue("nCancelld", quantity);
     }
     
-    public int getEntryNo(){
-        return (int) getValue("nEntryNox");
+    public int getCancelled(){
+        return (int) getValue("nCancelld");
     }
     
-    public JSONObject setSourceCode(String sourceCode){
-        return setValue("sSourceCd", sourceCode);
+    public JSONObject setIssued(int quantity){
+        return setValue("nIssueQty", quantity);
     }
     
-    public String getSourceCode(){
-        return (String) getValue("sSourceCd");
+    public int getIssued(){
+        return (int) getValue("nIssueQty");
     }
     
-    public JSONObject setSourceNo(String sourceNo){
-        return setValue("sSourceNo", sourceNo);
+    public JSONObject setPurchase(int quantity){
+        return setValue("nOrderQty", quantity);
     }
     
-    public String getSourceNo(){
-        return (String) getValue("sSourceNo");
+    public int getPurchase(){
+        return (int) getValue("nOrderQty");
     }
     
-    public JSONObject isConfirmed(boolean isConfirmed){
-        return setValue("cConfirmd", isConfirmed ? "1" : "0");
-    }
-
-    public boolean isisConfirmed(){
-        return ((String) getValue("cConfirmd")).equals("1");
-    }
-        
-    public JSONObject setTransactionStatus(String transactionStatus){
-        return setValue("cTranStat", transactionStatus);
+    public JSONObject setAllocated(int quantity){
+        return setValue("nAllocQty", quantity);
     }
     
-    public String getTransactionStatus(){
-        return (String) getValue("cTranStat");
+    public int getAllocated(){
+        return (int) getValue("nAllocQty");
     }
     
-    public JSONObject setModifyingId(String modifyingId){
-        return setValue("sModified", modifyingId);
+    public JSONObject setReceived(int quantity){
+        return setValue("nReceived", quantity);
     }
     
-    public String getModifyingId(){
-        return (String) getValue("sModified");
+    public int getReceived(){
+        return (int) getValue("nReceived");
+    }
+    
+    public JSONObject setNotes(String notes){
+        return setValue("sNotesxxx", notes);
+    }
+    
+    public String getNotes(){
+        return (String) getValue("sNotesxxx");
     }
     
     public JSONObject setModifiedDate(Date modifiedDate){
@@ -223,72 +230,25 @@ public class Model_Inv_Stock_Request_Detail extends Model{
         return (Date) getValue("dModified");
     }
     
-    @Override
-    public String getNextCode() {
-        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getConnection(), poGRider.getBranchCode());
-    }
-    
     //reference object models
-    public Model_Branch Branch() {
-        if (!"".equals((String) getValue("sBranchCd"))) {
-            if (poBranch.getEditMode() == EditMode.READY
-                    && poBranch.getBranchCode().equals((String) getValue("sBranchCd"))) {
-                return poBranch;
+    public Model_Inv_Master InvMaster() {
+        if (!"".equals((String) getValue("sStockIDx"))) {
+            if (poInvMaster.getEditMode() == EditMode.READY
+                    && poInvMaster.getStockId().equals((String) getValue("sStockIDx"))) {
+                return poInvMaster;
             } else {
-                poJSON = poBranch.openRecord((String) getValue("sBranchCd"));
+                poJSON = poInvMaster.openRecord((String) getValue("sStockIDx"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
-                    return poBranch;
+                    return poInvMaster;
                 } else {
-                    poBranch.initialize();
-                    return poBranch;
+                    poInvMaster.initialize();
+                    return poInvMaster;
                 }
             }
         } else {
-            poBranch.initialize();
-            return poBranch;
-        }
-    }
-    
-    public Model_Category Industry() {
-        if (!"".equals((String) getValue("sIndstCdx"))) {
-            if (poIndustry.getEditMode() == EditMode.READY
-                    && poIndustry.getCategoryId().equals((String) getValue("sIndstCdx"))) {
-                return poIndustry;
-            } else {
-                poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poIndustry;
-                } else {
-                    poIndustry.initialize();
-                    return poIndustry;
-                }
-            }
-        } else {
-            poIndustry.initialize();
-            return poIndustry;
-        }
-    }
-    
-    public Model_Category_Level2 Category() {
-        if (!"".equals((String) getValue("sCategrCd"))) {
-            if (poCategory.getEditMode() == EditMode.READY
-                    && poCategory.getCategoryId().equals((String) getValue("sCategrCd"))) {
-                return poCategory;
-            } else {
-                poJSON = poCategory.openRecord((String) getValue("sCategrCd"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poCategory;
-                } else {
-                    poCategory.initialize();
-                    return poCategory;
-                }
-            }
-        } else {
-            poCategory.initialize();
-            return poCategory;
+            poInvMaster.initialize();
+            return poInvMaster;
         }
     }
     //end - reference object models
