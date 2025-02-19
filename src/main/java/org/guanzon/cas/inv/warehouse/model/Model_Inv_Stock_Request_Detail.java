@@ -7,7 +7,6 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.InventoryClassification;
 import org.guanzon.cas.inv.model.Model_Inv_Master;
-import org.guanzon.cas.inv.model.Model_Inventory;
 import org.guanzon.cas.inv.services.InvModels;
 import org.json.simple.JSONObject;
 
@@ -26,6 +25,7 @@ public class Model_Inv_Stock_Request_Detail extends Model{
             MiscUtil.initRowSet(poEntity);
             
             //assign default values
+            poEntity.updateObject("sStockIDx", "");
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateObject("nQuantity", 0);
             poEntity.updateObject("cClassify", InventoryClassification.NEW_ITEMS);

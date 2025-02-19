@@ -2,10 +2,7 @@
 
 import org.guanzon.appdriver.base.GRider;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
-import org.guanzon.cas.inv.warehouse.services.InvWarehouseModels;
-import org.guanzon.cas.parameter.Bin;
-import org.guanzon.cas.parameter.Color;
+import org.guanzon.cas.inv.warehouse.StockRequest;
 import org.json.simple.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -17,7 +14,7 @@ import org.junit.runners.MethodSorters;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class testInvStockRequestMaster {
     static GRider instance;
-    static Model_Inv_Stock_Request_Master record;
+    static StockRequest trans;
 
     @BeforeClass
     public static void setUpClass() {
@@ -25,48 +22,76 @@ public class testInvStockRequestMaster {
 
         instance = MiscUtil.Connect();
         
-        record = new InvWarehouseModels(instance).InventoryStockRequestMaster();
+        trans = new StockRequest();
+        trans.setApplicationDriver(instance);
+        trans.setBranchCode(instance.getBranchCode());
+        trans.setVerifyEntryNo(true);
+        trans.setWithParent(false);
     }
 
     @Test
-    public void testNewRecord() {
+    public void testNewTransaction() {
+        String branchCd = instance.getBranchCode();
+        String industryId = "0001";
+        String categoryId = "0002";
+        String remarks = "this is a test.";
+        
+        String stockId = "M00125000001";
+        int quantity = 110;
+        String classify = "A";
+        int recOrder = 110;
+        int onHand = 10;
+        
         JSONObject loJSON;
+        
+        loJSON = trans.InitTransaction();
+        if (!"success".equals((String) loJSON.get("result"))) Assert.fail();
 
-        loJSON = record.newRecord();
-        if ("error".equals((String) loJSON.get("result"))) {
-            Assert.fail((String) loJSON.get("message"));
-        }           
+        loJSON = trans.NewTransaction();
+        if (!"success".equals((String) loJSON.get("result"))) Assert.fail();
+
+        trans.Master().setBranchCode(branchCd);
+        Assert.assertEquals(trans.Master().getBranchCode(), branchCd);
         
-        loJSON = record.setBranchCode("M001");
-        if ("error".equals((String) loJSON.get("result"))) {
-            Assert.fail((String) loJSON.get("message"));
-        }  
+        trans.Master().setIndustryId(industryId);
+        Assert.assertEquals(trans.Master().getIndustryId(), industryId);
         
-        loJSON = record.setTransactionDate(instance.getServerDate());
-        if ("error".equals((String) loJSON.get("result"))) {
-            Assert.fail((String) loJSON.get("message"));
-        }     
+        trans.Master().setCategoryId(categoryId);
+        Assert.assertEquals(trans.Master().getCategoryId(), categoryId);
         
-        loJSON = record.setModifyingId(instance.getUserID());
-        if ("error".equals((String) loJSON.get("result"))) {
-            Assert.fail((String) loJSON.get("message"));
-        }     
+        trans.Master().setRemarks(remarks);
+        Assert.assertEquals(trans.Master().getRemarks(), remarks);
+
+        trans.Detail(0).setStockId(stockId);
+        trans.Detail(0).setQuantity(quantity);
+        trans.Detail(0).setClassification(classify);
+        trans.Detail(0).setRecommendedOrder(recOrder);
+        trans.Detail(0).setQuantityOnHand(onHand);
         
-        loJSON = record.setModifiedDate(instance.getServerDate());
-        if ("error".equals((String) loJSON.get("result"))) {
-            Assert.fail((String) loJSON.get("message"));
-        }     
+        trans.AddDetail();
+        trans.Detail(1).setStockId("M00225000111");
+        trans.Detail(1).setQuantity(0);
+        trans.Detail(1).setClassification(classify);
+        trans.Detail(1).setRecommendedOrder(recOrder);
+        trans.Detail(1).setQuantityOnHand(onHand);
         
-        loJSON = record.saveRecord();
-        if ("error".equals((String) loJSON.get("result"))) {
-            Assert.fail((String) loJSON.get("message"));
-        }  
-    }
-   
+        trans.AddDetail();
+        trans.AddDetail();
+//        trans.Detail(1).setStockId(stockId);
+
+        loJSON = trans.SaveTransaction();
+        if (!"success".equals((String) loJSON.get("result"))) {
+            System.err.println((String) loJSON.get("message"));
+            Assert.fail();
+        }
+        
+//        loJSON = trans.clear();
+//        if (!"success".equals((String) loJSON.get("result"))) Assert.fail();
+    }   
     
     @AfterClass
     public static void tearDownClass() {
-        record = null;
+        trans = null;
         instance = null;
     }
 }
