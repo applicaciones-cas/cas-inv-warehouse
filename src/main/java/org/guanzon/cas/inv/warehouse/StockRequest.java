@@ -7,25 +7,13 @@ import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseModels;
+import org.guanzon.cas.parameter.Branch;
+import org.guanzon.cas.parameter.Category;
+import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 
 public class StockRequest extends Transaction{
     private final String SOURCE_CODE = "InvR";
-        
-    @Override
-    public String getSourceCode(){
-        return SOURCE_CODE;
-    }    
-    
-    @Override
-    public Model_Inv_Stock_Request_Master Master() {
-        return (Model_Inv_Stock_Request_Master) poMaster;
-    }
-
-    @Override
-    public Model_Inv_Stock_Request_Detail Detail(int row) {
-        return (Model_Inv_Stock_Request_Detail) paDetail.get(row);
-    }    
     
     public JSONObject InitTransaction(){        
         poMaster = new InvWarehouseModels(poGRider).InventoryStockRequestMaster();
@@ -43,6 +31,14 @@ public class StockRequest extends Transaction{
         return saveTransaction();
     }
     
+    public JSONObject OpenTransaction(String transactionNo){        
+        return openTransaction(transactionNo);
+    }
+    
+    public JSONObject UpdateTransaction(){
+        return updateTransaction();
+    }
+    
     public JSONObject AddDetail(){
         if (Detail(getDetailCount() - 1).getStockId().isEmpty()) {
             poJSON = new JSONObject();
@@ -53,6 +49,63 @@ public class StockRequest extends Transaction{
         
         return addDetail();
     }
+    
+    /*Search Master References*/
+    public JSONObject searchBranch(String value, boolean byCode){
+        try {
+            Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+            object.setRecordStatus("1");
+
+            poJSON = object.searchRecord(value, byCode);
+    
+            if ("success".equals((String) poJSON.get("result"))){
+                Master().setBranchCode(object.getModel().getBranchCode());
+            }    
+        } catch (ExceptionInInitializerError e) {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "This procedure must not be called when there is no UI.");
+        }
+        
+        return poJSON;
+    }
+    
+    //TODO: add searching for Industry
+    
+    public JSONObject searchCategory(String value, boolean byCode){
+        try {
+            Category object = new ParamControllers(poGRider, logwrapr).Category();
+            object.setRecordStatus("1");
+
+            poJSON = object.searchRecord(value, byCode);
+    
+            if ("success".equals((String) poJSON.get("result"))){
+                Master().setCategoryId(object.getModel().getCategoryId());
+            }    
+        } catch (ExceptionInInitializerError e) {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "This procedure must not be called when there is no UI.");
+        }
+        
+        return poJSON;
+    }
+    /*End - Search Master References*/
+        
+    @Override
+    public String getSourceCode(){
+        return SOURCE_CODE;
+    }    
+    
+    @Override
+    public Model_Inv_Stock_Request_Master Master() {
+        return (Model_Inv_Stock_Request_Master) poMaster;
+    }
+
+    @Override
+    public Model_Inv_Stock_Request_Detail Detail(int row) {
+        return (Model_Inv_Stock_Request_Detail) paDetail.get(row);
+    }    
         
     @Override
     public JSONObject willSave() {
@@ -67,7 +120,7 @@ public class StockRequest extends Transaction{
                 detail.remove();
             }
         }
-             
+
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr ++){            
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
@@ -106,5 +159,10 @@ public class StockRequest extends Transaction{
     public void saveComplete() {
         /*This procedure was called when saving was complete*/
         System.out.println("Transaction saved successfully.");
+    }
+    
+    @Override
+    public void initSQL(){
+        SQL_BROWSE = "SELECT";
     }
 }
