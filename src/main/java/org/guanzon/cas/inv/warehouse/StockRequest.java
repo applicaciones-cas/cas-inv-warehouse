@@ -1,21 +1,28 @@
 package org.guanzon.cas.inv.warehouse;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
+import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseModels;
+import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
+import org.guanzon.cas.inv.warehouse.validators.StockRequestValidatorFactory;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Category;
+import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 
-public class StockRequest extends Transaction{
-    private final String SOURCE_CODE = "InvR";
-    
-    public JSONObject InitTransaction(){        
+public class StockRequest extends Transaction{   
+    public JSONObject InitTransaction(){      
+        SOURCE_CODE = "InvR";
+        
         poMaster = new InvWarehouseModels(poGRider).InventoryStockRequestMaster();
         poDetail = new InvWarehouseModels(poGRider).InventoryStockRequestDetail();
         paDetail = new ArrayList<>();        
@@ -23,15 +30,15 @@ public class StockRequest extends Transaction{
         return initialize();
     }
     
-    public JSONObject NewTransaction(){
+    public JSONObject NewTransaction() throws CloneNotSupportedException{        
         return newTransaction();
     }
     
-    public JSONObject SaveTransaction(){
+    public JSONObject SaveTransaction() throws SQLException{
         return saveTransaction();
     }
     
-    public JSONObject OpenTransaction(String transactionNo){        
+    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException{        
         return openTransaction(transactionNo);
     }
     
@@ -39,7 +46,151 @@ public class StockRequest extends Transaction{
         return updateTransaction();
     }
     
-    public JSONObject AddDetail(){
+    public JSONObject ConfirmTransaction(String remarks) throws ParseException {
+        poJSON = new JSONObject();
+        
+        String lsStatus = StockRequestStatus.CONFIRMED;
+        boolean lbConfirm = true;
+        
+        if (getEditMode() != EditMode.READY){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;                
+        }
+        
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already confirmed.");
+            return poJSON;                
+        }
+        
+        //validator
+        poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        //change status
+        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
+        
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        
+        if (lbConfirm) poJSON.put("message", "Transaction confirmed successfully.");
+        else poJSON.put("message", "Transaction confirmation request submitted successfully.");
+        
+        return poJSON;
+    }
+    
+    public JSONObject PostTransaction(String remarks) throws ParseException {
+        poJSON = new JSONObject();
+        
+        String lsStatus = StockRequestStatus.PROCESSED;
+        boolean lbConfirm = true;
+        
+        if (getEditMode() != EditMode.READY){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;                
+        }
+        
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already processed.");
+            return poJSON;                
+        }
+        
+        //validator
+        poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        //change status
+        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
+        
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        
+        if (lbConfirm) poJSON.put("message", "Transaction posted successfully.");
+        else poJSON.put("message", "Transaction posting request submitted successfully.");
+        
+        return poJSON;
+    }
+    
+    public JSONObject CancelTransaction(String remarks) throws ParseException {
+        poJSON = new JSONObject();
+        
+        String lsStatus = StockRequestStatus.CANCELLED;
+        boolean lbConfirm = true;
+        
+        if (getEditMode() != EditMode.READY){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;                
+        }
+        
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already cancelled.");
+            return poJSON;                
+        }
+        
+        //validator
+        poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        //change status
+        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
+        
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        
+        if (lbConfirm) poJSON.put("message", "Transaction cancelled successfully.");
+        else poJSON.put("message", "Transaction cancellation request submitted successfully.");
+        
+        return poJSON;
+    }
+    
+    public JSONObject VoidTransaction(String remarks) throws ParseException {
+        poJSON = new JSONObject();
+        
+        String lsStatus = StockRequestStatus.VOID;
+        boolean lbConfirm = true;
+        
+        if (getEditMode() != EditMode.READY){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;                
+        }
+        
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already voided.");
+            return poJSON;                
+        }
+        
+        //validator
+        poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        //change status
+        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
+        
+        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        
+        if (lbConfirm) poJSON.put("message", "Transaction voided successfully.");
+        else poJSON.put("message", "Transaction voiding request submitted successfully.");
+        
+        return poJSON;
+    }
+    
+    public JSONObject AddDetail() throws CloneNotSupportedException{
         if (Detail(getDetailCount() - 1).getStockId().isEmpty()) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
@@ -51,42 +202,41 @@ public class StockRequest extends Transaction{
     }
     
     /*Search Master References*/
-    public JSONObject searchBranch(String value, boolean byCode){
-        try {
-            Branch object = new ParamControllers(poGRider, logwrapr).Branch();
-            object.setRecordStatus("1");
+    public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError{
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus("1");
 
-            poJSON = object.searchRecord(value, byCode);
-    
-            if ("success".equals((String) poJSON.get("result"))){
-                Master().setBranchCode(object.getModel().getBranchCode());
-            }    
-        } catch (ExceptionInInitializerError e) {
-            poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "This procedure must not be called when there is no UI.");
-        }
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))){
+            Master().setBranchCode(object.getModel().getBranchCode());
+        }    
         
         return poJSON;
     }
     
-    //TODO: add searching for Industry
-    
-    public JSONObject searchCategory(String value, boolean byCode){
-        try {
-            Category object = new ParamControllers(poGRider, logwrapr).Category();
-            object.setRecordStatus("1");
+    public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError{
+        Industry object = new ParamControllers(poGRider, logwrapr).Industry();
+        object.setRecordStatus("1");
 
-            poJSON = object.searchRecord(value, byCode);
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))){
+            Master().setIndustryId(object.getModel().getIndustryId());
+        }    
+        
+        return poJSON;
+    }
     
-            if ("success".equals((String) poJSON.get("result"))){
-                Master().setCategoryId(object.getModel().getCategoryId());
-            }    
-        } catch (ExceptionInInitializerError e) {
-            poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "This procedure must not be called when there is no UI.");
-        }
+    public JSONObject SearchCategory(String value, boolean byCode) throws ExceptionInInitializerError{
+        Category object = new ParamControllers(poGRider, logwrapr).Category();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))){
+            Master().setCategoryId(object.getModel().getCategoryId());
+        }    
         
         return poJSON;
     }
@@ -141,9 +291,9 @@ public class StockRequest extends Transaction{
     }
     
     @Override
-    public boolean save() {
+    public JSONObject save() {
         /*Put saving business rules here*/
-        return true;
+        return isEntryOkay(StockRequestStatus.OPEN);
     }
     
     @Override
@@ -164,5 +314,17 @@ public class StockRequest extends Transaction{
     @Override
     public void initSQL(){
         SQL_BROWSE = "SELECT";
+    }
+    
+    @Override
+    protected JSONObject isEntryOkay(String status){
+        GValidator loValidator = StockRequestValidatorFactory.make((String) poMaster.getValue("sIndstCdx"));
+        
+        loValidator.setApplicationDriver(poGRider);
+        loValidator.setTransactionStatus(status);
+        
+        poJSON = loValidator.validate();
+        
+        return poJSON;
     }
 }
