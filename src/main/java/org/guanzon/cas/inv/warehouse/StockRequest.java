@@ -312,13 +312,22 @@ public class StockRequest extends Transaction{
     }
     
     @Override
+    public JSONObject initFields() {
+        /*Put initial model values here*/
+        poJSON = new JSONObject();
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    @Override
     public void initSQL(){
-        SQL_BROWSE = "SELECT";
+        SQL_BROWSE = "";
     }
     
     @Override
     protected JSONObject isEntryOkay(String status){
-        GValidator loValidator = StockRequestValidatorFactory.make((String) poMaster.getValue("sIndstCdx"));
+        GValidator loValidator = StockRequestValidatorFactory.make(Master().getIndustryId());
         
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
