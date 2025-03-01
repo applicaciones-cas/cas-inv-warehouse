@@ -9,15 +9,15 @@ import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Category;
-import org.guanzon.cas.parameter.model.Model_Category_Level2;
+import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
 public class Model_Inv_Stock_Request_Master extends Model{      
     //reference objects
     Model_Branch poBranch;
-    Model_Category poIndustry;
-    Model_Category_Level2 poCategory;
+    Model_Industry poIndustry;
+    Model_Category poCategory;
     
     @Override
     public void initialize() {
@@ -49,8 +49,8 @@ public class Model_Inv_Stock_Request_Master extends Model{
             //initialize reference objects
             ParamModels model = new ParamModels(poGRider);
             poBranch = model.Branch();
-            poIndustry = model.Category();
-            poCategory = model.Category2();
+            poIndustry = model.Industry();
+            poCategory = model.Category();
             //end - initialize reference objects
             
             pnEditMode = EditMode.UNKNOWN;
@@ -247,10 +247,10 @@ public class Model_Inv_Stock_Request_Master extends Model{
         }
     }
     
-    public Model_Category Industry() {
+    public Model_Industry Industry() {
         if (!"".equals((String) getValue("sIndstCdx"))) {
             if (poIndustry.getEditMode() == EditMode.READY
-                    && poIndustry.getCategoryId().equals((String) getValue("sIndstCdx"))) {
+                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {
                 return poIndustry;
             } else {
                 poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
@@ -268,7 +268,7 @@ public class Model_Inv_Stock_Request_Master extends Model{
         }
     }
     
-    public Model_Category_Level2 Category() {
+    public Model_Category Category() {
         if (!"".equals((String) getValue("sCategrCd"))) {
             if (poCategory.getEditMode() == EditMode.READY
                     && poCategory.getCategoryId().equals((String) getValue("sCategrCd"))) {
