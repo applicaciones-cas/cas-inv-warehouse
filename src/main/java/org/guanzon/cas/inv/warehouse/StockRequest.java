@@ -263,13 +263,23 @@ public class StockRequest extends Transaction{
         poJSON = new JSONObject();
         
         //remove items with no stockid or quantity order
+//        Iterator<Model> detail = Detail().iterator();
+//        while (detail.hasNext()) {
+//            if ("".equals((String) detail.next().getValue("sStockIDx")) ||
+//                (int)detail.next().getValue("nQuantity") <= 0) {
+//                detail.remove();
+//            }
+//        }
         Iterator<Model> detail = Detail().iterator();
-        while (detail.hasNext()) {
-            if ("".equals((String) detail.next().getValue("sStockIDx")) ||
-                (int)detail.next().getValue("nQuantity") <= 0) {
-                detail.remove();
-            }
-        }
+                while (detail.hasNext()) {
+                    Model item = detail.next(); // Store the item before checking conditions
+
+                    if ("".equals((String) item.getValue("sStockIDx"))
+                            || (int) item.getValue("nQuantity") <= 0) {
+                        detail.remove(); // Correctly remove the item
+                    }
+                }
+
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr ++){            
