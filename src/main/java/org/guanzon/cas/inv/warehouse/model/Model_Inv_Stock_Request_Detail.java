@@ -3,6 +3,7 @@ package org.guanzon.cas.inv.warehouse.model;
 import java.sql.SQLException;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
+import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.InventoryClassification;
@@ -231,13 +232,13 @@ public class Model_Inv_Stock_Request_Detail extends Model{
     }
     
     //reference object models
-    public Model_Inv_Master InvMaster() {
+    public Model_Inv_Master InvMaster() throws SQLException, GuanzonException{
         if (!"".equals((String) getValue("sStockIDx"))) {
             if (poInvMaster.getEditMode() == EditMode.READY
                     && poInvMaster.getStockId().equals((String) getValue("sStockIDx"))) {
                 return poInvMaster;
             } else {
-                poJSON = poInvMaster.openRecord((String) getValue("sStockIDx"));
+                poJSON = poInvMaster.openRecord((String) getValue("sStockIDx"), (String) getValue("sBranchCd"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poInvMaster;

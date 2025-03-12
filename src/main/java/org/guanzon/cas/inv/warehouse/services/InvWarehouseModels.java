@@ -1,11 +1,11 @@
 package org.guanzon.cas.inv.warehouse.services;
 
-import org.guanzon.appdriver.base.GRider;
+import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 
 public class InvWarehouseModels {
-    public InvWarehouseModels(GRider applicationDriver){
+    public InvWarehouseModels(GRiderCAS applicationDriver){
         poGRider = applicationDriver;
     }
     
@@ -43,7 +43,7 @@ public class InvWarehouseModels {
         return poInvRequestDetail;
     }
     
-    private final GRider poGRider;
+    private final GRiderCAS poGRider;
     
     private Model_Inv_Stock_Request_Master poInvRequestMaster;
     private Model_Inv_Stock_Request_Detail poInvRequestDetail;
