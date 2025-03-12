@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
+import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
@@ -34,11 +35,11 @@ public class StockRequest extends Transaction{
         return newTransaction();
     }
     
-    public JSONObject SaveTransaction() throws SQLException{
+    public JSONObject SaveTransaction() throws SQLException, GuanzonException{
         return saveTransaction();
     }
     
-    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException{        
+    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException{        
         return openTransaction(transactionNo);
     }
     
@@ -46,7 +47,7 @@ public class StockRequest extends Transaction{
         return updateTransaction();
     }
     
-    public JSONObject ConfirmTransaction(String remarks) throws ParseException {
+    public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.CONFIRMED;
@@ -82,7 +83,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject PostTransaction(String remarks) throws ParseException {
+    public JSONObject PostTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.PROCESSED;
@@ -118,7 +119,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject CancelTransaction(String remarks) throws ParseException {
+    public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.CANCELLED;
@@ -154,7 +155,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject VoidTransaction(String remarks) throws ParseException {
+    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.VOID;
@@ -202,7 +203,7 @@ public class StockRequest extends Transaction{
     }
     
     /*Search Master References*/
-    public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError{
+    public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus("1");
 
@@ -215,7 +216,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError{
+    public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
         object.setRecordStatus("1");
 
@@ -228,7 +229,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject SearchCategory(String value, boolean byCode) throws ExceptionInInitializerError{
+    public JSONObject SearchCategory(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
         Category object = new ParamControllers(poGRider, logwrapr).Category();
         object.setRecordStatus("1");
 
@@ -258,7 +259,7 @@ public class StockRequest extends Transaction{
     }    
         
     @Override
-    public JSONObject willSave() {
+    public JSONObject willSave() throws SQLException, GuanzonException{
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
         

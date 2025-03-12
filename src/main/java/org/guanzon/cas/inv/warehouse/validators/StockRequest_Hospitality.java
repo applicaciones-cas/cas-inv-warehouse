@@ -1,7 +1,7 @@
 package org.guanzon.cas.inv.warehouse.validators;
 
 import java.util.ArrayList;
-import org.guanzon.appdriver.base.GRider;
+import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
@@ -9,7 +9,7 @@ import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.json.simple.JSONObject;
 
 public class StockRequest_Hospitality implements GValidator{
-    GRider poGrider;
+    GRiderCAS poGrider;
     String psTranStat;
     JSONObject poJSON;
     
@@ -18,9 +18,8 @@ public class StockRequest_Hospitality implements GValidator{
 
     @Override
     public void setApplicationDriver(Object applicationDriver) {
-        poGrider = (GRider) applicationDriver;
+        poGrider = (GRiderCAS) applicationDriver;
     }
-
     @Override
     public void setTransactionStatus(String transactionStatus) {
         psTranStat = transactionStatus;

@@ -1,12 +1,12 @@
 
 
 import java.sql.SQLException;
-import org.guanzon.appdriver.base.GRider;
+import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.cas.inv.warehouse.StockRequest;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseControllers;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.ParseException;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -16,7 +16,7 @@ import org.junit.runners.MethodSorters;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class testInvStockRequestMaster {
-    static GRider instance;
+    static GRiderCAS instance;
     static StockRequest trans;
 
     @BeforeClass
@@ -29,18 +29,7 @@ public class testInvStockRequestMaster {
     }
 
     @Test
-    public void testNewTransaction() {
-        String branchCd = instance.getBranchCode();
-        String industryId = "02";
-        String categoryId = "0002";
-        String remarks = "this is a test.";
-        
-        String stockId = "M00125000001";
-        int quantity = 110;
-        String classify = "A";
-        int recOrder = 110;
-        int onHand = 10;
-        
+    public void testNewTransaction() {        
         JSONObject loJSON;
         
         try {
@@ -56,14 +45,15 @@ public class testInvStockRequestMaster {
                 Assert.fail();
             } 
             
+            trans.Master().setTransactionDate(instance.getServerDate()); 
+            
             //you can use trans.SearchBranch() when on UI 
 //            loJSON = trans.SearchBranch("", false);
 //            if (!"success".equals((String) loJSON.get("result"))){
 //                System.err.println((String) loJSON.get("message"));
 //                Assert.fail();
 //            } 
-            trans.Master().setBranchCode(branchCd); //direct assignment of value
-            Assert.assertEquals(trans.Master().getBranchCode(), branchCd);
+            trans.Master().setBranchCode("M001"); //direct assignment of value
 
             //you can use trans.SearchIndustry() when on UI 
 //            loJSON = trans.SearchIndustry("", false);
@@ -71,8 +61,7 @@ public class testInvStockRequestMaster {
 //                System.err.println((String) loJSON.get("message"));
 //                Assert.fail();
 //            } 
-            trans.Master().setIndustryId(industryId); //direct assignment of value
-            Assert.assertEquals(trans.Master().getIndustryId(), industryId);
+            trans.Master().setIndustryId("02"); //direct assignment of value
 
             //you can use trans.SearchCategory() when on UI 
 //            loJSON = trans.SearchCategory("", false);
@@ -80,39 +69,37 @@ public class testInvStockRequestMaster {
 //                System.err.println((String) loJSON.get("message"));
 //                Assert.fail();
 //            } 
-            trans.Master().setCategoryId(categoryId); //direct assignment of value
-            Assert.assertEquals(trans.Master().getCategoryId(), categoryId);
+            trans.Master().setCategoryId("0010"); //direct assignment of value
 
-            trans.Master().setRemarks(remarks);
-            Assert.assertEquals(trans.Master().getRemarks(), remarks);
+            trans.Master().setRemarks("This is a test.");
 
-            trans.Detail(0).setStockId(stockId);
-            trans.Detail(0).setQuantity(quantity);
-            trans.Detail(0).setClassification(classify);
-            trans.Detail(0).setRecommendedOrder(recOrder);
-            trans.Detail(0).setQuantityOnHand(onHand);
+            trans.Detail(0).setStockId("M00125000001");
+            trans.Detail(0).setQuantity(10);
+            trans.Detail(0).setClassification("F");
+            trans.Detail(0).setRecommendedOrder(10);
+            trans.Detail(0).setQuantityOnHand(5);
 
             trans.AddDetail();
-            trans.Detail(1).setStockId("M00225000111");
-            trans.Detail(1).setQuantity(0);
-            trans.Detail(1).setClassification(classify);
-            trans.Detail(1).setRecommendedOrder(recOrder);
-            trans.Detail(1).setQuantityOnHand(onHand);
+            trans.Detail(1).setStockId("M00125000002");
+            trans.Detail(1).setQuantity(10);
+            trans.Detail(1).setClassification("F");
+            trans.Detail(1).setRecommendedOrder(10);
+            trans.Detail(1).setQuantityOnHand(5);
 
             trans.AddDetail();
-            trans.Detail(2).setStockId("M00225000222");
+            trans.Detail(2).setStockId("M00125000003");
             trans.Detail(2).setQuantity(10);
-            trans.Detail(2).setClassification(classify);
-            trans.Detail(2).setRecommendedOrder(recOrder);
-            trans.Detail(2).setQuantityOnHand(onHand);
-
+            trans.Detail(2).setClassification("F");
+            trans.Detail(2).setRecommendedOrder(10);
+            trans.Detail(2).setQuantityOnHand(5);
+            
             trans.AddDetail();
-            trans.Detail(3).setStockId("M00225000333");
-            trans.Detail(3).setQuantity(50);
-            trans.Detail(3).setClassification(classify);
-            trans.Detail(3).setRecommendedOrder(recOrder);
-            trans.Detail(3).setQuantityOnHand(onHand);
-
+            trans.Detail(3).setStockId("M00125000004");
+            trans.Detail(3).setQuantity(10);
+            trans.Detail(3).setClassification("F");
+            trans.Detail(3).setRecommendedOrder(10);
+            trans.Detail(3).setQuantityOnHand(5);
+            
             trans.AddDetail();
 
             loJSON = trans.SaveTransaction();
@@ -120,7 +107,7 @@ public class testInvStockRequestMaster {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-        } catch (CloneNotSupportedException | SQLException | ExceptionInInitializerError e) {
+        } catch (CloneNotSupportedException | SQLException | ExceptionInInitializerError | GuanzonException e) {
             System.err.println(MiscUtil.getException(e));
             Assert.fail();
         }

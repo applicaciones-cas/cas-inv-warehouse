@@ -1,10 +1,10 @@
 package org.guanzon.cas.inv.warehouse.services;
 
-import org.guanzon.appdriver.base.GRider;
+import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.LogWrapper;
 import org.guanzon.cas.inv.warehouse.StockRequest;
 public class InvWarehouseControllers {
-    public InvWarehouseControllers(GRider applicationDriver, LogWrapper logWrapper){
+    public InvWarehouseControllers(GRiderCAS applicationDriver, LogWrapper logWrapper){
         poGRider = applicationDriver;
         poLogWrapper = logWrapper;
     }
@@ -38,7 +38,7 @@ public class InvWarehouseControllers {
         }
     }
     
-    private GRider poGRider;
+    private GRiderCAS poGRider;
     private LogWrapper poLogWrapper;
     
     private StockRequest poStockRequest;
