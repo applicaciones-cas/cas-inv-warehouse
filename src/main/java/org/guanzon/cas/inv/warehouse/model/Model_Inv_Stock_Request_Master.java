@@ -162,6 +162,14 @@ public class Model_Inv_Stock_Request_Master extends Model{
     public String getSourceNo(){
         return (String) getValue("sSourceNo");
     }
+    
+    public JSONObject setProcessed(boolean isProcessed) {
+        return setValue("cProcessd", isProcessed ? "1" : "0");
+    }
+
+    public boolean getProcessed() {
+        return ((String) getValue("cProcessd")).equals("1");
+    }
 
     public JSONObject setTransactionStatus(String transactionStatus){
         return setValue("cTranStat", transactionStatus);

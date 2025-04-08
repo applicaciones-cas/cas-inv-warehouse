@@ -1,11 +1,14 @@
 
 
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.cas.inv.warehouse.StockRequest;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseControllers;
+import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.json.simple.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -61,7 +64,7 @@ public class testInvStockRequestMaster {
 //                System.err.println((String) loJSON.get("message"));
 //                Assert.fail();
 //            } 
-            trans.Master().setIndustryId("02"); //direct assignment of value
+            trans.Master().setIndustryId("01"); //direct assignment of value
 
             //you can use trans.SearchCategory() when on UI 
 //            loJSON = trans.SearchCategory("", false);
@@ -72,7 +75,7 @@ public class testInvStockRequestMaster {
             trans.Master().setCategoryId("0010"); //direct assignment of value
 
             trans.Master().setRemarks("This is a test.");
-
+//            trans.Master().setTransactionStatus(StockRequestStatus.)
             trans.Detail(0).setStockId("M00125000001");
             trans.Detail(0).setQuantity(10);
             trans.Detail(0).setClassification("F");
@@ -113,82 +116,86 @@ public class testInvStockRequestMaster {
         }
     }   
     
-//    @Test
-//    public void testOpenTransaction() {
-//        JSONObject loJSON;
-//        
-//        try {
-//            loJSON = trans.InitTransaction();
-//            if (!"success".equals((String) loJSON.get("result"))){
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            } 
-//
-//            loJSON = trans.OpenTransaction("M00125000002");
-//            if (!"success".equals((String) loJSON.get("result"))){
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            } 
-//
-//            //retreiving using column index
-//            for (int lnCol = 1; lnCol <= trans.Master().getColumnCount(); lnCol++){
-//                System.out.println(trans.Master().getColumn(lnCol) + " ->> " + trans.Master().getValue(lnCol));
-//            }
-//            //retreiving using field descriptions
-//            System.out.println(trans.Master().Branch().getBranchName());
-//            System.out.println(trans.Master().Category().getDescription());
-//
-//            //retreiving using column index
-//            for (int lnCtr = 0; lnCtr <= trans.Detail().size() - 1; lnCtr++){
-//                for (int lnCol = 1; lnCol <= trans.Detail(lnCtr).getColumnCount(); lnCol++){
-//                    System.out.println(trans.Detail(lnCtr).getColumn(lnCol) + " ->> " + trans.Detail(lnCtr).getValue(lnCol));
-//                }
-//            }
-//        } catch (CloneNotSupportedException e) {
-//            System.err.println(MiscUtil.getException(e));
-//            Assert.fail();
-//        }
-//        
-//        
-//    }   
+    @Test
+    public void testOpenTransaction() {
+        JSONObject loJSON;
+        
+        try {
+            loJSON = trans.InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))){
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            } 
+
+            loJSON = trans.OpenTransaction("M00125000002");
+            if (!"success".equals((String) loJSON.get("result"))){
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            } 
+
+            //retreiving using column index
+            for (int lnCol = 1; lnCol <= trans.Master().getColumnCount(); lnCol++){
+                System.out.println(trans.Master().getColumn(lnCol) + " ->> " + trans.Master().getValue(lnCol));
+            }
+            
+                //retreiving using field descriptions
+                System.out.println(trans.Master().Branch().getBranchName());
+           
+            System.out.println(trans.Master().Category().getDescription());
+
+            //retreiving using column index
+            for (int lnCtr = 0; lnCtr <= trans.Detail().size() - 1; lnCtr++){
+                for (int lnCol = 1; lnCol <= trans.Detail(lnCtr).getColumnCount(); lnCol++){
+                    System.out.println(trans.Detail(lnCtr).getColumn(lnCol) + " ->> " + trans.Detail(lnCtr).getValue(lnCol));
+                }
+            }
+        } catch (CloneNotSupportedException |SQLException | GuanzonException e) {
+            System.err.println(MiscUtil.getException(e));
+            Assert.fail();
+        }
+        
+        
+    }   
 //    
-//    @Test
-//    public void testUpdateTransaction() {
-//        JSONObject loJSON;
-//       
-//        try {
-//            loJSON = trans.InitTransaction();
-//            if (!"success".equals((String) loJSON.get("result"))){
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            } 
-//
-//            loJSON = trans.OpenTransaction("M00125000003");
-//            if (!"success".equals((String) loJSON.get("result"))){
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            } 
-//
-//            loJSON = trans.UpdateTransaction();
-//            if (!"success".equals((String) loJSON.get("result"))){
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            } 
-//
-//            trans.Detail(1).setQuantity(0);
-//            trans.AddDetail();
-//
-//            loJSON = trans.SaveTransaction();
-//            if (!"success".equals((String) loJSON.get("result"))) {
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            }
-//        } catch (CloneNotSupportedException | SQLException e) {
-//            System.err.println(MiscUtil.getException(e));
-//            Assert.fail();
-//        }
-//        
-//    }   
+    @Test
+    public void testUpdateTransaction() {
+        JSONObject loJSON;
+       
+        try {
+            loJSON = trans.InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))){
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            } 
+
+                loJSON = trans.OpenTransaction("M00125000001");
+            
+            if (!"success".equals((String) loJSON.get("result"))){
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            } 
+
+            loJSON = trans.UpdateTransaction();
+            if (!"success".equals((String) loJSON.get("result"))){
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            } 
+
+            trans.Detail(1).setQuantity(5);
+            trans.Detail(2).setQuantity(8);
+
+
+            loJSON = trans.SaveTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+        } catch (CloneNotSupportedException | SQLException | GuanzonException e) {
+            System.err.println(MiscUtil.getException(e));
+            Assert.fail();
+        }
+        
+    }   
 //    
 //    @Test
 //    public void testConfirmTransaction() {

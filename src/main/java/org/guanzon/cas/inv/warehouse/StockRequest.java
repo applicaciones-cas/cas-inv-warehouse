@@ -35,7 +35,7 @@ public class StockRequest extends Transaction{
         return newTransaction();
     }
     
-    public JSONObject SaveTransaction() throws SQLException, GuanzonException{
+    public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException{
         return saveTransaction();
     }
     
@@ -47,7 +47,7 @@ public class StockRequest extends Transaction{
         return updateTransaction();
     }
     
-    public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
+    public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.CONFIRMED;
@@ -83,7 +83,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject PostTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
+    public JSONObject PostTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.PROCESSED;
@@ -119,7 +119,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
+    public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.CANCELLED;
@@ -155,7 +155,7 @@ public class StockRequest extends Transaction{
         return poJSON;
     }
     
-    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException {
+    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         
         String lsStatus = StockRequestStatus.VOID;
