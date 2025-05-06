@@ -79,18 +79,27 @@ public class Model_Inv_Stock_Request_Master extends Model{
         return setValue("sIndstCdx", industryId);
     }
     
+    
     public String getIndustryId(){
         return (String) getValue("sIndstCdx");
+    }
+    
+    public JSONObject setCompanyID(String companyID) {
+        return setValue("sCompnyID", companyID);
+    }
+
+    public String getCompanyID() {
+        return (String) getValue("sCompnyID");
     }
     
     public JSONObject setCategoryId(String categoryId){
         return setValue("sCategrCd", categoryId);
     }
-    
+ 
     public String getCategoryId(){
         return (String) getValue("sCategrCd");
     }
-    
+  
     public JSONObject setTransactionDate(Date transactionDate){
         return setValue("dTransact", transactionDate);
     }

@@ -7,13 +7,17 @@ import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.iface.GValidator;
+import org.guanzon.cas.inv.Inventory;
+import org.guanzon.cas.inv.services.InvControllers;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseModels;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.guanzon.cas.inv.warehouse.validators.StockRequestValidatorFactory;
 import org.guanzon.cas.parameter.Branch;
+import org.guanzon.cas.parameter.Brand;
 import org.guanzon.cas.parameter.Category;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -241,8 +245,21 @@ public class StockRequest extends Transaction{
         
         return poJSON;
     }
+    public JSONObject SearchBrand(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Brand brand = new ParamControllers(poGRider, logwrapr).Brand();
+        brand.getModel().setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = brand.searchRecord(value, byCode, poGRider.getIndustry());
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            Detail(row).setBrandId(brand.getModel().getBrandId());
+        }
+
+        return poJSON;
+    }
+    
     /*End - Search Master References*/
-        
+       
     @Override
     public String getSourceCode(){
         return SOURCE_CODE;
@@ -339,4 +356,33 @@ public class StockRequest extends Transaction{
         
         return poJSON;
     }
+    public JSONObject isDetailHasZeroQty() {
+        poJSON = new JSONObject();
+        boolean allZeroQuantity = true;
+        int tblRow = -1;
+
+        for (int lnRow = 0; lnRow < getDetailCount() - 1; lnRow++) {
+            int quantity = Detail(lnRow).getQuantity();
+            String stockID = (String) Detail(lnRow).getValue("sStockIDx");
+
+            if (!stockID.isEmpty()) {
+                if (quantity != 0) {
+                    allZeroQuantity = false;  // Found at least one item with non-zero quantity
+                } else if (tblRow == -1) {
+                    tblRow = lnRow;  // Capture the first row with zero quantity
+                }
+            }
+        }
+
+        if (allZeroQuantity) {
+            poJSON.put("result", "success");
+        } else {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Some items have non-zero quantity. Do you want to proceed anyway?");
+            poJSON.put("tableRow", tblRow);
+        }
+
+        return poJSON;
+}
+
 }

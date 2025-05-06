@@ -11,6 +11,7 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.InventoryClassification;
 import org.guanzon.cas.inv.model.Model_Inv_Master;
 import org.guanzon.cas.inv.model.Model_Inventory;
+import org.guanzon.cas.parameter.model.Model_Brand;
 import org.guanzon.cas.inv.services.InvModels;
 import org.json.simple.JSONObject;
 
@@ -19,7 +20,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     //reference objects
     Model_Inv_Master poInvMaster;
     Model_Inventory poInventory;
-
+    Model_Brand poBrand;
     @Override
     public void initialize() {
         try {
@@ -49,7 +50,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             poEntity.updateObject("nAllocQty", 0);
             poEntity.updateObject("nReceived", 0);
             poEntity.updateObject("dModified", "0000-00-00 00:00:00");
-
+            
             //end - assign default values
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -79,7 +80,6 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public JSONObject setTransactionNo(String transactionNo) {
         return setValue("sTransNox", transactionNo);
     }
-
     public String getTransactionNo() {
         return (String) getValue("sTransNox");
     }
@@ -115,11 +115,15 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public String getClassification() {
         return (String) getValue("cClassify");
     }
-
+    public JSONObject setBrandId(String brandID){
+        return setValue("sBrandIDx", brandID);
+    }
+    public String getBrandId() {
+        return poBrand.getBrandId();
+    }
     public JSONObject setRecommendedOrder(int quantity) {
         return setValue("nRecOrder", quantity);
     }
-
     public int getRecommendedOrder() {
         return (int) getValue("nRecOrder");
     }
@@ -183,7 +187,8 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public JSONObject setCancelled(int quantity) {
         return setValue("nCancelld", quantity);
     }
-
+    
+    
     public int getCancelled() {
         return (int) getValue("nCancelld");
     }
@@ -211,7 +216,13 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public int getAllocated() {
         return (int) getValue("nAllocQty");
     }
+    public JSONObject setSupplierID(String supplierID) {
+        return setValue("sSupplier", supplierID);
+    }
 
+    public String getSupplierID() {
+        return (String) getValue("sSupplier");
+    }
     public JSONObject setReceived(int quantity) {
         return setValue("nReceived", quantity);
     }
@@ -235,7 +246,6 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
-
     //reference object models
     public Model_Inv_Master InvMaster() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sStockIDx"))) {
@@ -316,5 +326,20 @@ public class Model_Inv_Stock_Request_Detail extends Model {
         }
 
         return poJSON;
+    }
+    public Model_Brand Brand() throws GuanzonException, SQLException {
+        if (!"".equals(getBrandId())) {
+            poJSON = poBrand.openRecord(getBrandId());
+            if ("success".equals((String) poJSON.get("result"))) {
+                return poBrand;
+            } else {
+                poBrand.initialize();
+                return poBrand;
+            }
+
+        } else {
+            poBrand.initialize();
+            return poBrand;
+        }
     }
 }
