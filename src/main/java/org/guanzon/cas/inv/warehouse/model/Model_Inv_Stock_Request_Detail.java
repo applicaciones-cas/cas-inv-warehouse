@@ -33,21 +33,21 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             //assign default values
             poEntity.updateObject("sStockIDx", "");
             poEntity.updateObject("nEntryNox", 0);
-            poEntity.updateObject("nQuantity", 0);
+            poEntity.updateObject("nQuantity", 0.00);
             poEntity.updateObject("cClassify", InventoryClassification.NEW_ITEMS);
-            poEntity.updateObject("nRecOrder", 0);
-            poEntity.updateObject("nQtyOnHnd", 0);
-            poEntity.updateObject("nResvOrdr", 0);
-            poEntity.updateObject("nBackOrdr", 0);
+            poEntity.updateObject("nRecOrder", 0.00);
+            poEntity.updateObject("nQtyOnHnd", 0.00);
+            poEntity.updateObject("nResvOrdr", 0.00);
+            poEntity.updateObject("nBackOrdr", 0.00);
             poEntity.updateObject("nOnTranst", 0);
             poEntity.updateObject("nAvgMonSl", 0);
             poEntity.updateObject("nMaxLevel", 0);
-            poEntity.updateObject("nApproved", 0);
-            poEntity.updateObject("nCancelld", 0);
-            poEntity.updateObject("nIssueQty", 0);
-            poEntity.updateObject("nOrderQty", 0);
-            poEntity.updateObject("nAllocQty", 0);
-            poEntity.updateObject("nReceived", 0);
+            poEntity.updateObject("nApproved", 0.00);
+            poEntity.updateObject("nCancelld", 0.00);
+            poEntity.updateObject("nIssueQty", 0.00);
+            poEntity.updateObject("nOrderQty", 0.00);
+            poEntity.updateObject("nAllocQty", 0.00);
+            poEntity.updateObject("nReceived", 0.00);
             poEntity.updateObject("dModified", "0000-00-00 00:00:00");
 
             //end - assign default values
@@ -100,12 +100,12 @@ public class Model_Inv_Stock_Request_Detail extends Model {
         return (String) getValue("sStockIDx");
     }
 
-    public JSONObject setQuantity(int quantity) {
+    public JSONObject setQuantity(Number quantity) {
         return setValue("nQuantity", quantity);
     }
 
-    public int getQuantity() {
-        return (int) getValue("nQuantity");
+    public Number getQuantity() {
+        return (Number) getValue("nQuantity");
     }
 
     public JSONObject setClassification(String classification) {
@@ -116,36 +116,36 @@ public class Model_Inv_Stock_Request_Detail extends Model {
         return (String) getValue("cClassify");
     }
 
-    public JSONObject setRecommendedOrder(int quantity) {
+    public JSONObject setRecommendedOrder(Number quantity) {
         return setValue("nRecOrder", quantity);
     }
 
-    public int getRecommendedOrder() {
-        return (int) getValue("nRecOrder");
+    public Number getRecommendedOrder() {
+        return (Number) getValue("nRecOrder");
     }
 
-    public JSONObject setQuantityOnHand(int quantity) {
+    public JSONObject setQuantityOnHand(Number quantity) {
         return setValue("nQtyOnHnd", quantity);
     }
 
-    public int getQuantityOnHand() {
-        return (int) getValue("nQtyOnHnd");
+    public Number getQuantityOnHand() {
+        return (Number) getValue("nQtyOnHnd");
     }
 
-    public JSONObject setReservedOrder(int quantity) {
+    public JSONObject setReservedOrder(Number quantity) {
         return setValue("nResvOrdr", quantity);
     }
 
-    public int getReservedOrder() {
-        return (int) getValue("nResvOrdr");
+    public Number getReservedOrder() {
+        return (Number) getValue("nResvOrdr");
     }
 
-    public JSONObject setBackOrder(int quantity) {
+    public JSONObject setBackOrder(Number quantity) {
         return setValue("nBackOrdr", quantity);
     }
 
-    public int getBackOrder() {
-        return (int) getValue("nBackOrdr");
+    public Number getBackOrder() {
+        return (Number) getValue("nBackOrdr");
     }
 
     public JSONObject setOnTransit(int quantity) {
@@ -176,48 +176,48 @@ public class Model_Inv_Stock_Request_Detail extends Model {
         return setValue("nApproved", quantity);
     }
 
-    public int getApproved() {
-        return (int) getValue("nApproved");
+    public Number getApproved() {
+        return (Number) getValue("nApproved");
     }
 
-    public JSONObject setCancelled(int quantity) {
+    public JSONObject setCancelled(Number quantity) {
         return setValue("nCancelld", quantity);
     }
 
-    public int getCancelled() {
-        return (int) getValue("nCancelld");
+    public Number getCancelled() {
+        return (Number) getValue("nCancelld");
     }
 
-    public JSONObject setIssued(int quantity) {
+    public JSONObject setIssued(Number quantity) {
         return setValue("nIssueQty", quantity);
     }
 
-    public int getIssued() {
-        return (int) getValue("nIssueQty");
+    public Number getIssued() {
+        return (Number) getValue("nIssueQty");
     }
 
-    public JSONObject setPurchase(int quantity) {
+    public JSONObject setPurchase(Number quantity) {
         return setValue("nOrderQty", quantity);
     }
 
-    public int getPurchase() {
-        return (int) getValue("nOrderQty");
+    public Number getPurchase() {
+        return (Number) getValue("nOrderQty");
     }
 
     public JSONObject setAllocated(int quantity) {
         return setValue("nAllocQty", quantity);
     }
 
-    public int getAllocated() {
-        return (int) getValue("nAllocQty");
+    public Number getAllocated() {
+        return (Number) getValue("nAllocQty");
     }
 
-    public JSONObject setReceived(int quantity) {
+    public JSONObject setReceived(Number quantity) {
         return setValue("nReceived", quantity);
     }
 
-    public int getReceived() {
-        return (int) getValue("nReceived");
+    public Number getReceived() {
+        return (Number) getValue("nReceived");
     }
 
     public JSONObject setNotes(String notes) {
@@ -243,7 +243,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
                     && poInvMaster.getStockId().equals((String) getValue("sStockIDx"))) {
                 return poInvMaster;
             } else {
-                poJSON= poInvMaster.openRecord((String) getValue("sStockIDx"));
+                poJSON = poInvMaster.openRecord((String) getValue("sStockIDx"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poInvMaster;
@@ -278,15 +278,16 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             return poInventory;
         }
     }
+
     //end - reference object models
-    public JSONObject openRecordByReference(String Id1, Object Id2) throws SQLException, GuanzonException  {
+    public JSONObject openRecordByReference(String Id1, Object Id2) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
         String lsSQL = MiscUtil.makeSelect(this);
 
         //replace the condition based on the primary key column of the record
-        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox = " + SQLUtil.toSQL(Id1) +
-                                                " AND sStockIDx = " + SQLUtil.toSQL(Id2));
+        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox = " + SQLUtil.toSQL(Id1)
+                + " AND sStockIDx = " + SQLUtil.toSQL(Id2));
 
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
@@ -295,7 +296,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
                 for (int lnCtr = 1; lnCtr <= loRS.getMetaData().getColumnCount(); lnCtr++) {
                     setValue(lnCtr, loRS.getObject(lnCtr));
                 }
-                
+
                 MiscUtil.close(loRS);
 
                 pnEditMode = EditMode.READY;
