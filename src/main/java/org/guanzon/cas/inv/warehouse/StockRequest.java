@@ -321,7 +321,7 @@ public class StockRequest extends Transaction{
                 if (lnRow != row) {
                             if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
                         && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
-                        int existingQty = Detail(lnRow).getQuantity();
+                            int existingQty = Detail(lnRow).getQuantity();
                             int newQty = existingQty + 1;
                             Detail(lnRow).setQuantity(newQty);
 
@@ -509,9 +509,11 @@ public class StockRequest extends Transaction{
 
        public JSONObject searchTransaction()throws CloneNotSupportedException,SQLException,GuanzonException {
           
-
+          
         poJSON = new JSONObject();
         String lsTransStat = "";
+       
+        Master().setTransactionStatus("102");
         System.out.println("PS Transtat"+psTranStat);
         if (psTranStat != null) {
             if (psTranStat.length() > 1) {
