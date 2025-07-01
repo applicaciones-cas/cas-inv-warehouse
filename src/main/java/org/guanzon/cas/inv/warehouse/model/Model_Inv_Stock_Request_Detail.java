@@ -2,6 +2,7 @@ package org.guanzon.cas.inv.warehouse.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -13,6 +14,12 @@ import org.guanzon.cas.inv.model.Model_Inv_Master;
 import org.guanzon.cas.inv.model.Model_Inventory;
 import org.guanzon.cas.parameter.model.Model_Brand;
 import org.guanzon.cas.inv.services.InvModels;
+import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Category;
+import org.guanzon.cas.parameter.model.Model_Company;
+import org.guanzon.cas.parameter.model.Model_Industry;
+import org.guanzon.cas.parameter.model.Model_Model;
+import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
 public class Model_Inv_Stock_Request_Detail extends Model {
@@ -21,6 +28,9 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     Model_Inv_Master poInvMaster;
     Model_Inventory poInventory;
     Model_Brand poBrand;
+    Model_Company poCompany;
+    
+        
     @Override
     public void initialize() {
         try {
@@ -49,8 +59,8 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             poEntity.updateObject("nOrderQty", 0);
             poEntity.updateObject("nAllocQty", 0);
             poEntity.updateObject("nReceived", 0);
-            poEntity.updateObject("dModified", "0000-00-00 00:00:00");
-            
+            poEntity.updateObject("dModified", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+  
             //end - assign default values
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -64,14 +74,22 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             InvModels modelInv = new InvModels(poGRider);
             poInvMaster = modelInv.InventoryMaster();
             poInventory = modelInv.Inventory();
-            //end - initialize reference objects
+            ParamModels model = new ParamModels(poGRider);
+            
+            poBrand = model.Brand();
+
+            poCompany = model.Company();
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
             System.exit(1);
         }
     }
-
+private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
+    }
     @Override
     public String getNextCode() {
         return "";
@@ -119,7 +137,15 @@ public class Model_Inv_Stock_Request_Detail extends Model {
         return setValue("sBrandIDx", brandID);
     }
     public String getBrandId() {
-        return poBrand.getBrandId();
+       return (String) getValue("sBrandIDx");
+
+    }
+    public JSONObject setCategoryCode(String categoryCode) {
+        return setValue("sCategrCd", categoryCode);
+    }
+
+    public String getCategoryCode() {
+        return (String) getValue("sCategrCd");
     }
     public JSONObject setRecommendedOrder(int quantity) {
         return setValue("nRecOrder", quantity);
