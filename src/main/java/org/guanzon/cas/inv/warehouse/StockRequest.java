@@ -3,12 +3,10 @@ package org.guanzon.cas.inv.warehouse;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.sql.ResultSet;
 import java.util.List;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
-
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -16,7 +14,6 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.InvMaster;
-import org.guanzon.cas.inv.Inventory;
 import org.guanzon.cas.inv.services.InvControllers;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
@@ -292,8 +289,8 @@ public class StockRequest extends Transaction{
                         && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
                     
                     
-                    int existingQty = Detail(lnRow).getQuantity();
-                    int newQty = existingQty + 1;
+                    double existingQty = Detail(lnRow).getQuantity();
+                    double newQty = existingQty + 1;
                     Detail(lnRow).setQuantity(newQty);
                     
                    
@@ -327,8 +324,8 @@ public class StockRequest extends Transaction{
                 if (lnRow != row) {
                             if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
                         && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
-                            int existingQty = Detail(lnRow).getQuantity();
-                            int newQty = existingQty + 1;
+                            double existingQty = Detail(lnRow).getQuantity();
+                            double newQty = existingQty + 1;
                             Detail(lnRow).setQuantity(newQty);
 
 
@@ -356,8 +353,8 @@ public class StockRequest extends Transaction{
                 if (lnRow != row) {
                     if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
                         && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
-                        int existingQty = Detail(lnRow).getQuantity();
-                        int newQty = existingQty + 1;
+                        double existingQty = Detail(lnRow).getQuantity();
+                        double newQty = existingQty + 1;
                         Detail(lnRow).setQuantity(newQty);
 
 
@@ -475,7 +472,7 @@ public class StockRequest extends Transaction{
         int tblRow = -1;
 
         for (int lnRow = 0; lnRow < getDetailCount() - 1; lnRow++) {
-            int quantity = Detail(lnRow).getQuantity();
+            double quantity = Detail(lnRow).getQuantity();
             String stockID = (String) Detail(lnRow).getValue("sStockIDx");
 
             if (!stockID.isEmpty()) {
