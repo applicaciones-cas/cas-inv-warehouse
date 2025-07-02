@@ -2,6 +2,7 @@ package org.guanzon.cas.inv.warehouse.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -11,7 +12,10 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.InventoryClassification;
 import org.guanzon.cas.inv.model.Model_Inv_Master;
 import org.guanzon.cas.inv.model.Model_Inventory;
+import org.guanzon.cas.parameter.model.Model_Brand;
 import org.guanzon.cas.inv.services.InvModels;
+import org.guanzon.cas.parameter.model.Model_Company;
+import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
 public class Model_Inv_Stock_Request_Detail extends Model {
@@ -19,7 +23,10 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     //reference objects
     Model_Inv_Master poInvMaster;
     Model_Inventory poInventory;
-
+    Model_Brand poBrand;
+    Model_Company poCompany;
+    
+        
     @Override
     public void initialize() {
         try {
@@ -33,23 +40,23 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             //assign default values
             poEntity.updateObject("sStockIDx", "");
             poEntity.updateObject("nEntryNox", 0);
-            poEntity.updateObject("nQuantity", 0.00);
+            poEntity.updateObject("nQuantity", 0);
             poEntity.updateObject("cClassify", InventoryClassification.NEW_ITEMS);
-            poEntity.updateObject("nRecOrder", 0.00);
-            poEntity.updateObject("nQtyOnHnd", 0.00);
-            poEntity.updateObject("nResvOrdr", 0.00);
-            poEntity.updateObject("nBackOrdr", 0.00);
+            poEntity.updateObject("nRecOrder", 0);
+            poEntity.updateObject("nQtyOnHnd", 0);
+            poEntity.updateObject("nResvOrdr", 0);
+            poEntity.updateObject("nBackOrdr", 0);
             poEntity.updateObject("nOnTranst", 0);
             poEntity.updateObject("nAvgMonSl", 0);
             poEntity.updateObject("nMaxLevel", 0);
-            poEntity.updateObject("nApproved", 0.00);
-            poEntity.updateObject("nCancelld", 0.00);
-            poEntity.updateObject("nIssueQty", 0.00);
-            poEntity.updateObject("nOrderQty", 0.00);
-            poEntity.updateObject("nAllocQty", 0.00);
-            poEntity.updateObject("nReceived", 0.00);
-            poEntity.updateObject("dModified", "0000-00-00 00:00:00");
-
+            poEntity.updateObject("nApproved", 0);
+            poEntity.updateObject("nCancelld", 0);
+            poEntity.updateObject("nIssueQty", 0);
+            poEntity.updateObject("nOrderQty", 0);
+            poEntity.updateObject("nAllocQty", 0);
+            poEntity.updateObject("nReceived", 0);
+            poEntity.updateObject("dModified", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+  
             //end - assign default values
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -63,14 +70,24 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             InvModels modelInv = new InvModels(poGRider);
             poInvMaster = modelInv.InventoryMaster();
             poInventory = modelInv.Inventory();
-            //end - initialize reference objects
+            ParamModels model = new ParamModels(poGRider);
+            
+            poBrand = model.Brand();
+
+            poCompany = model.Company();
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
             System.exit(1);
         }
     }
-
+    
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
+    }
+    
     @Override
     public String getNextCode() {
         return "";
@@ -79,7 +96,6 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public JSONObject setTransactionNo(String transactionNo) {
         return setValue("sTransNox", transactionNo);
     }
-
     public String getTransactionNo() {
         return (String) getValue("sTransNox");
     }
@@ -100,12 +116,12 @@ public class Model_Inv_Stock_Request_Detail extends Model {
         return (String) getValue("sStockIDx");
     }
 
-    public JSONObject setQuantity(Number quantity) {
+    public JSONObject setQuantity(double quantity) {
         return setValue("nQuantity", quantity);
     }
 
-    public Number getQuantity() {
-        return (Number) getValue("nQuantity");
+    public double getQuantity() {
+        return Double.parseDouble(String.valueOf(getValue("nQuantity")));
     }
 
     public JSONObject setClassification(String classification) {
@@ -115,109 +131,129 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public String getClassification() {
         return (String) getValue("cClassify");
     }
+    public JSONObject setBrandId(String brandID){
+        return setValue("sBrandIDx", brandID);
+    }
+    public String getBrandId() {
+       return (String) getValue("sBrandIDx");
 
-    public JSONObject setRecommendedOrder(Number quantity) {
+    }
+    public JSONObject setCategoryCode(String categoryCode) {
+        return setValue("sCategrCd", categoryCode);
+    }
+
+    public String getCategoryCode() {
+        return (String) getValue("sCategrCd");
+    }
+    public JSONObject setRecommendedOrder(double quantity) {
         return setValue("nRecOrder", quantity);
     }
-
-    public Number getRecommendedOrder() {
-        return (Number) getValue("nRecOrder");
+    public double getRecommendedOrder() {
+        return Double.parseDouble(String.valueOf(getValue("nRecOrder")));
     }
 
-    public JSONObject setQuantityOnHand(Number quantity) {
+    public JSONObject setQuantityOnHand(double quantity) {
         return setValue("nQtyOnHnd", quantity);
     }
 
-    public Number getQuantityOnHand() {
-        return (Number) getValue("nQtyOnHnd");
+    public double getQuantityOnHand() {
+        return Double.parseDouble(String.valueOf(getValue("nRecOrder")));
     }
 
-    public JSONObject setReservedOrder(Number quantity) {
+    public JSONObject setReservedOrder(double quantity) {
         return setValue("nResvOrdr", quantity);
     }
 
-    public Number getReservedOrder() {
-        return (Number) getValue("nResvOrdr");
+    public double getReservedOrder() {
+        return Double.parseDouble(String.valueOf(getValue("nResvOrdr")));
     }
 
-    public JSONObject setBackOrder(Number quantity) {
+    public JSONObject setBackOrder(double quantity) {
         return setValue("nBackOrdr", quantity);
     }
 
-    public Number getBackOrder() {
-        return (Number) getValue("nBackOrdr");
+    public double getBackOrder() {
+        return Double.parseDouble(String.valueOf(getValue("nBackOrdr")));
     }
 
-    public JSONObject setOnTransit(int quantity) {
+    public JSONObject setOnTransit(double quantity) {
         return setValue("nOnTranst", quantity);
     }
 
-    public int getOnTransit() {
-        return (int) getValue("nOnTranst");
+    public double getOnTransit() {
+        return Double.parseDouble(String.valueOf(getValue("nOnTranst")));
     }
 
-    public JSONObject setAverageMonthlySale(int quantity) {
+    public JSONObject setAverageMonthlySale(double quantity) {
         return setValue("nAvgMonSl", quantity);
     }
 
-    public int getAverageMonthlySale() {
-        return (int) getValue("nAvgMonSl");
+    public double getAverageMonthlySale() {
+        return Double.parseDouble(String.valueOf(getValue("nAvgMonSl")));        
     }
 
-    public JSONObject setMaxLevel(int quantity) {
+    public JSONObject setMaxLevel(double quantity) {
         return setValue("nMaxLevel", quantity);
     }
 
-    public int getMaxLevel() {
-        return (int) getValue("nMaxLevel");
+    public double getMaxLevel() {
+        return Double.parseDouble(String.valueOf(getValue("nMaxLevel")));        
     }
 
-    public JSONObject setApproved(int quantity) {
+    public JSONObject setApproved(double quantity) {
         return setValue("nApproved", quantity);
     }
 
-    public Number getApproved() {
-        return (Number) getValue("nApproved");
+    public double getApproved() {
+        return Double.parseDouble(String.valueOf(getValue("nApproved")));
     }
 
-    public JSONObject setCancelled(Number quantity) {
+    public JSONObject setCancelled(double quantity) {
         return setValue("nCancelld", quantity);
     }
-
-    public Number getCancelled() {
-        return (Number) getValue("nCancelld");
+    
+    public double getCancelled() {
+        return Double.parseDouble(String.valueOf(getValue("nCancelld")));
     }
 
-    public JSONObject setIssued(Number quantity) {
+    public JSONObject setIssued(double quantity) {
         return setValue("nIssueQty", quantity);
     }
 
-    public Number getIssued() {
-        return (Number) getValue("nIssueQty");
+    public double getIssued() {
+        return Double.parseDouble(String.valueOf(getValue("nIssueQty")));
     }
 
-    public JSONObject setPurchase(Number quantity) {
+    public JSONObject setPurchase(double quantity) {
         return setValue("nOrderQty", quantity);
     }
 
-    public Number getPurchase() {
-        return (Number) getValue("nOrderQty");
+    public double getPurchase() {
+        return Double.parseDouble(String.valueOf(getValue("nOrderQty")));        
     }
 
-    public JSONObject setAllocated(int quantity) {
+    public JSONObject setAllocated(double quantity) {
         return setValue("nAllocQty", quantity);
     }
 
-    public Number getAllocated() {
-        return (Number) getValue("nAllocQty");
+    public double getAllocated() {
+        return Double.parseDouble(String.valueOf(getValue("nAllocQty")));        
+    }
+    
+    public JSONObject setSupplierID(String supplierID) {
+        return setValue("sSupplier", supplierID);
     }
 
-    public JSONObject setReceived(Number quantity) {
+    public String getSupplierID() {
+        return (String) getValue("sSupplier");
+    }
+    
+    public JSONObject setReceived(double quantity) {
         return setValue("nReceived", quantity);
     }
 
-    public Number getReceived() {
-        return (Number) getValue("nReceived");
+    public double getReceived() {
+        return Double.parseDouble(String.valueOf(getValue("nReceived")));                
     }
 
     public JSONObject setNotes(String notes) {
@@ -235,7 +271,6 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
-
     //reference object models
     public Model_Inv_Master InvMaster() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sStockIDx"))) {
@@ -243,7 +278,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
                     && poInvMaster.getStockId().equals((String) getValue("sStockIDx"))) {
                 return poInvMaster;
             } else {
-                poJSON = poInvMaster.openRecord((String) getValue("sStockIDx"));
+                poJSON= poInvMaster.openRecord((String) getValue("sStockIDx"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poInvMaster;
@@ -278,16 +313,15 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             return poInventory;
         }
     }
-
     //end - reference object models
-    public JSONObject openRecordByReference(String Id1, Object Id2) throws SQLException, GuanzonException {
+    public JSONObject openRecordByReference(String Id1, Object Id2) throws SQLException, GuanzonException  {
         poJSON = new JSONObject();
 
         String lsSQL = MiscUtil.makeSelect(this);
 
         //replace the condition based on the primary key column of the record
-        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox = " + SQLUtil.toSQL(Id1)
-                + " AND sStockIDx = " + SQLUtil.toSQL(Id2));
+        lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox = " + SQLUtil.toSQL(Id1) +
+                                                " AND sStockIDx = " + SQLUtil.toSQL(Id2));
 
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
@@ -296,7 +330,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
                 for (int lnCtr = 1; lnCtr <= loRS.getMetaData().getColumnCount(); lnCtr++) {
                     setValue(lnCtr, loRS.getObject(lnCtr));
                 }
-
+                
                 MiscUtil.close(loRS);
 
                 pnEditMode = EditMode.READY;
@@ -317,5 +351,20 @@ public class Model_Inv_Stock_Request_Detail extends Model {
         }
 
         return poJSON;
+    }
+    public Model_Brand Brand() throws GuanzonException, SQLException {
+        if (!"".equals(getBrandId())) {
+            poJSON = poBrand.openRecord(getBrandId());
+            if ("success".equals((String) poJSON.get("result"))) {
+                return poBrand;
+            } else {
+                poBrand.initialize();
+                return poBrand;
+            }
+
+        } else {
+            poBrand.initialize();
+            return poBrand;
+        }
     }
 }
