@@ -14,11 +14,7 @@ import org.guanzon.cas.inv.model.Model_Inv_Master;
 import org.guanzon.cas.inv.model.Model_Inventory;
 import org.guanzon.cas.parameter.model.Model_Brand;
 import org.guanzon.cas.inv.services.InvModels;
-import org.guanzon.cas.parameter.model.Model_Branch;
-import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.model.Model_Company;
-import org.guanzon.cas.parameter.model.Model_Industry;
-import org.guanzon.cas.parameter.model.Model_Model;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
@@ -85,11 +81,13 @@ public class Model_Inv_Stock_Request_Detail extends Model {
             System.exit(1);
         }
     }
-private static String xsDateShort(Date fdValue) {
+    
+    private static String xsDateShort(Date fdValue) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         String date = sdf.format(fdValue);
         return date;
     }
+    
     @Override
     public String getNextCode() {
         return "";
@@ -118,12 +116,12 @@ private static String xsDateShort(Date fdValue) {
         return (String) getValue("sStockIDx");
     }
 
-    public JSONObject setQuantity(int quantity) {
+    public JSONObject setQuantity(double quantity) {
         return setValue("nQuantity", quantity);
     }
 
-    public int getQuantity() {
-        return (int) getValue("nQuantity");
+    public double getQuantity() {
+        return Double.parseDouble(String.valueOf(getValue("nQuantity")));
     }
 
     public JSONObject setClassification(String classification) {
@@ -147,101 +145,101 @@ private static String xsDateShort(Date fdValue) {
     public String getCategoryCode() {
         return (String) getValue("sCategrCd");
     }
-    public JSONObject setRecommendedOrder(int quantity) {
+    public JSONObject setRecommendedOrder(double quantity) {
         return setValue("nRecOrder", quantity);
     }
-    public int getRecommendedOrder() {
-        return (int) getValue("nRecOrder");
+    public double getRecommendedOrder() {
+        return Double.parseDouble(String.valueOf(getValue("nRecOrder")));
     }
 
-    public JSONObject setQuantityOnHand(int quantity) {
+    public JSONObject setQuantityOnHand(double quantity) {
         return setValue("nQtyOnHnd", quantity);
     }
 
-    public int getQuantityOnHand() {
-        return (int) getValue("nQtyOnHnd");
+    public double getQuantityOnHand() {
+        return Double.parseDouble(String.valueOf(getValue("nRecOrder")));
     }
 
-    public JSONObject setReservedOrder(int quantity) {
+    public JSONObject setReservedOrder(double quantity) {
         return setValue("nResvOrdr", quantity);
     }
 
-    public int getReservedOrder() {
-        return (int) getValue("nResvOrdr");
+    public double getReservedOrder() {
+        return Double.parseDouble(String.valueOf(getValue("nResvOrdr")));
     }
 
-    public JSONObject setBackOrder(int quantity) {
+    public JSONObject setBackOrder(double quantity) {
         return setValue("nBackOrdr", quantity);
     }
 
-    public int getBackOrder() {
-        return (int) getValue("nBackOrdr");
+    public double getBackOrder() {
+        return Double.parseDouble(String.valueOf(getValue("nBackOrdr")));
     }
 
-    public JSONObject setOnTransit(int quantity) {
+    public JSONObject setOnTransit(double quantity) {
         return setValue("nOnTranst", quantity);
     }
 
-    public int getOnTransit() {
-        return (int) getValue("nOnTranst");
+    public double getOnTransit() {
+        return Double.parseDouble(String.valueOf(getValue("nOnTranst")));
     }
 
-    public JSONObject setAverageMonthlySale(int quantity) {
+    public JSONObject setAverageMonthlySale(double quantity) {
         return setValue("nAvgMonSl", quantity);
     }
 
-    public int getAverageMonthlySale() {
-        return (int) getValue("nAvgMonSl");
+    public double getAverageMonthlySale() {
+        return Double.parseDouble(String.valueOf(getValue("nAvgMonSl")));        
     }
 
-    public JSONObject setMaxLevel(int quantity) {
+    public JSONObject setMaxLevel(double quantity) {
         return setValue("nMaxLevel", quantity);
     }
 
-    public int getMaxLevel() {
-        return (int) getValue("nMaxLevel");
+    public double getMaxLevel() {
+        return Double.parseDouble(String.valueOf(getValue("nMaxLevel")));        
     }
 
-    public JSONObject setApproved(int quantity) {
+    public JSONObject setApproved(double quantity) {
         return setValue("nApproved", quantity);
     }
 
-    public int getApproved() {
-        return (int) getValue("nApproved");
+    public double getApproved() {
+        return Double.parseDouble(String.valueOf(getValue("nApproved")));
     }
 
-    public JSONObject setCancelled(int quantity) {
+    public JSONObject setCancelled(double quantity) {
         return setValue("nCancelld", quantity);
     }
     
-    
-    public int getCancelled() {
-        return (int) getValue("nCancelld");
+    public double getCancelled() {
+        return Double.parseDouble(String.valueOf(getValue("nCancelld")));
     }
 
-    public JSONObject setIssued(int quantity) {
+    public JSONObject setIssued(double quantity) {
         return setValue("nIssueQty", quantity);
     }
 
-    public int getIssued() {
-        return (int) getValue("nIssueQty");
+    public double getIssued() {
+        return Double.parseDouble(String.valueOf(getValue("nIssueQty")));
     }
 
-    public JSONObject setPurchase(int quantity) {
+    public JSONObject setPurchase(double quantity) {
         return setValue("nOrderQty", quantity);
     }
 
-    public int getPurchase() {
-        return (int) getValue("nOrderQty");
+    public double getPurchase() {
+        return Double.parseDouble(String.valueOf(getValue("nOrderQty")));        
     }
 
-    public JSONObject setAllocated(int quantity) {
+    public JSONObject setAllocated(double quantity) {
         return setValue("nAllocQty", quantity);
     }
 
-    public int getAllocated() {
-        return (int) getValue("nAllocQty");
+    public double getAllocated() {
+        return Double.parseDouble(String.valueOf(getValue("nAllocQty")));        
     }
+    
     public JSONObject setSupplierID(String supplierID) {
         return setValue("sSupplier", supplierID);
     }
@@ -249,12 +247,13 @@ private static String xsDateShort(Date fdValue) {
     public String getSupplierID() {
         return (String) getValue("sSupplier");
     }
-    public JSONObject setReceived(int quantity) {
+    
+    public JSONObject setReceived(double quantity) {
         return setValue("nReceived", quantity);
     }
 
-    public int getReceived() {
-        return (int) getValue("nReceived");
+    public double getReceived() {
+        return Double.parseDouble(String.valueOf(getValue("nReceived")));                
     }
 
     public JSONObject setNotes(String notes) {
