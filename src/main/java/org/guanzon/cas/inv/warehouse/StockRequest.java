@@ -245,12 +245,15 @@ public class StockRequest extends Transaction{
     public JSONObject SearchCategory(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
         Category object = new ParamControllers(poGRider, logwrapr).Category();
         object.setRecordStatus("1");
-
+        
         poJSON = object.searchRecord(value, byCode);
-
+       
+       
+        Master().setCategoryId(object.getModel().getCategoryId());
+        //di pumapasok sa if kaya naglagay sa labas
         if ("success".equals((String) poJSON.get("result"))){
-            
             Master().setCategoryId(object.getModel().getCategoryId());
+         
         }    
         
         return poJSON;
@@ -273,13 +276,15 @@ public class StockRequest extends Transaction{
     
     
      /*Search Detail References*/
-   public JSONObject SearchModel(String value, boolean byCode, String brandId, int row,String categId,String industryID) throws SQLException, GuanzonException, NullPointerException {
+   public JSONObject SearchModel(String value, boolean byCode, String brandId, int row,String industryID) throws SQLException, GuanzonException, NullPointerException {
  
-        InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
     object.getModel().setRecordStatus(RecordStatus.ACTIVE);
-   
-    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,null);
-    System.out.println("Category "+object.getModel().Inventory().getCategoryFirstLevelId());
+    String categID = Master().getCategoryId();
+    System.out.println("Categ na tama" + categID);
+    
+    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
+    
     if ("success".equals((String) poJSON.get("result"))) {
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
@@ -314,8 +319,9 @@ public class StockRequest extends Transaction{
 
          InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
-        poJSON = object.Inventory().searchRecord(value, byCode, null, brandID, industryID);
+         String categID = Master().getCategoryId();
+          System.out.println("Categ na tama" + categID);
+        poJSON = object.Inventory().searchRecord(value, byCode, null, brandID, industryID,categID);
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
@@ -343,8 +349,8 @@ public class StockRequest extends Transaction{
         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
        
-
-        poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industry);
+         String categID = Master().getCategoryId();
+        poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industry,categID);
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
@@ -495,26 +501,25 @@ public class StockRequest extends Transaction{
     
                   
         @Override
-        public void initSQL() {
-            SQL_BROWSE = "SELECT "
-                       + "  a.sTransNox, "
-                       + "  a.dTransact, "
-                       + "  a.sIndstCdx "   
-                       + " FROM Inv_Stock_Request_Master a "
-                       + "LEFT JOIN Industry b ON a.sIndstCdx = b.sIndstCdx "
-                       + "LEFT JOIN company c ON c.sCompnyID = a.sCompnyID ";
-        }
+    public void initSQL() {
+        SQL_BROWSE = "SELECT " +
+                     "  a.sTransNox, " +
+                     "  a.dTransact, " +
+                     "  a.sIndstCdx " +  
+                     "FROM Inv_Stock_Request_Master a " +
+                     "LEFT JOIN Industry b ON a.sIndstCdx = b.sIndstCdx " +
+                     "LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID";
+    }
 
 
 
        public JSONObject searchTransaction()throws CloneNotSupportedException,SQLException,GuanzonException {
           
-          
         poJSON = new JSONObject();
         String lsTransStat = "";
        
-        Master().setTransactionStatus("102");
-        System.out.println("PS Transtat"+psTranStat);
+       
+           System.out.println("TRANS - "+psTranStat.length());
         if (psTranStat != null) {
             if (psTranStat.length() > 1) {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
@@ -525,12 +530,14 @@ public class StockRequest extends Transaction{
                 lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
             }
         }
-
+        System.out.print("COmpany id - "+Master().getCompanyID());
+        System.out.print("Category - "+Master().getCategoryId());
+        System.out.print("BRANCH CODE - "+poGRider.getBranchCode());
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
-                + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
-                + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
-                + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+               + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()) 
+               + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId()) 
+               +" AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 //                + " AND a.sSupplier LIKE " + SQLUtil.toSQL("%" + Master().getSupplierId()));
         if (psTranStat != null && !"".equals(psTranStat)) {
             lsSQL = lsSQL + lsTransStat;
@@ -538,12 +545,12 @@ public class StockRequest extends Transaction{
 
         System.out.println("Executing SQL: " + lsSQL);
        
-            poJSON = ShowDialogFX.Browse(poGRider,
-                lsSQL,
-                "",
-                "Transaction Date»Transaction No»Industry Code",       
-                "dTransact»sTransNox»sIndstCdx",                       
-                "a.dTransact»a.sTransNox»a.sIndstCdx",                 
+                poJSON = ShowDialogFX.Browse(poGRider,
+                 lsSQL,
+                 "",
+                 "Transaction Date»Transaction No»Industry Code",       
+                 "dTransact»sTransNox»sIndstCdx",                      
+                 "a.dTransact»a.sTransNox»a.sIndstCdx",                
                 1);
 
 
