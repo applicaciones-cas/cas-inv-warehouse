@@ -273,7 +273,7 @@ public class StockRequest extends Transaction{
     
     
      /*Search Detail References*/
-   public JSONObject SearchModel(String value, boolean byCode, String brandId, int row,String industryID,String categID) throws SQLException, GuanzonException, NullPointerException {
+   public JSONObject SearchModel(String value, boolean byCode, String brandId, int row,String industryID) throws SQLException, GuanzonException, NullPointerException {
  
     InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
     object.getModel().setRecordStatus(RecordStatus.ACTIVE);
@@ -281,11 +281,9 @@ public class StockRequest extends Transaction{
 //    System.out.println("Categ na tama" + categID);
     
    
-    if(categID == ""){
-             poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID);
-        }else{
-          poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
-        }
+   
+          poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,Master().getCategoryId());
+        
     if ("success".equals((String) poJSON.get("result"))) {
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
@@ -315,18 +313,16 @@ public class StockRequest extends Transaction{
     return poJSON;
 }
 
- public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandId,String industryID,String categID)
+ public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandId,String industryID)
                throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
 
          InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
 //         String categID = Master().getCategoryId();
 //          System.out.println("Categ na tama" + categID);
-        if(categID == ""){
-             poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID);
-        }else{
-         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
-        }
+        
+         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,Master().getCategoryId());
+        
        
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
@@ -350,15 +346,13 @@ public class StockRequest extends Transaction{
         return poJSON;
     
     }
-  public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row,String industryID, String brandId,String categID) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
+  public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row,String industryID, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
             NullPointerException {
         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
-        if(categID == ""){
-             poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID);
-        }else{
-         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
-        }
+       
+         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,Master().getCategoryId());
+        
 //         String categID = Master().getCategoryId();
 //        poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industry,categID);
         if ("success".equals((String) poJSON.get("result"))) {
@@ -523,13 +517,11 @@ public class StockRequest extends Transaction{
 
 
         
-       public JSONObject searchTransaction(String industryID,String categoryCode)throws CloneNotSupportedException,SQLException,GuanzonException {
+       public JSONObject searchTransaction(String industryID)throws CloneNotSupportedException,SQLException,GuanzonException {
           
         poJSON = new JSONObject();
         String lsTransStat = "";
        
-       
-           System.out.println("TRANS - "+psTranStat.length());
         if (psTranStat != null) {
             if (psTranStat.length() > 1) {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
@@ -544,9 +536,10 @@ public class StockRequest extends Transaction{
         initSQL();
 //        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
         String lsSQLTry = SQL_BROWSE;
+           
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(industryID)
                //+ " AND a.sCompnyID = " + SQLUtil.toSQL(poGRider.getCompnyId())
-               + " AND a.sCategrCd = " + SQLUtil.toSQL(categoryCode) 
+               + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId()) 
                +" AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 //                + " AND a.sSupplier LIKE " + SQLUtil.toSQL("%" + Master().getSupplierId()));
         if (psTranStat != null && !"".equals(psTranStat)) {
