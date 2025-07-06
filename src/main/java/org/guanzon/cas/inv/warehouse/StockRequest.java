@@ -499,15 +499,16 @@ public class StockRequest extends Transaction{
     
                   
         @Override
-    public void initSQL() {
-        SQL_BROWSE = "SELECT " +
-                     "  a.sTransNox, " +
-                     "  a.dTransact, " +
-                     "  a.sIndstCdx " +  
-                     "FROM Inv_Stock_Request_Master a " +
-                     "LEFT JOIN Industry b ON a.sIndstCdx = b.sIndstCdx " +
-                     "LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID";
-    }
+public void initSQL() {
+    SQL_BROWSE = "SELECT " +
+                 "  a.sTransNox, " +
+                 "  a.dTransact, " +
+                 "  a.sIndstCdx, " +     
+                 "  a.sReferNox " +       
+                 "FROM Inv_Stock_Request_Master a " +
+                 "LEFT JOIN Industry b ON a.sIndstCdx = b.sIndstCdx " +
+                 "LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID";
+}
 
 
         
@@ -542,13 +543,14 @@ public class StockRequest extends Transaction{
 
         System.out.println("Executing SQL: " + lsSQL);
        
-                poJSON = ShowDialogFX.Browse(poGRider,
-                 lsSQL,
-                 "",
-                 "Transaction Date»Transaction No»Industry Code",       
-                 "dTransact»sTransNox»sIndstCdx",                      
-                 "a.dTransact»a.sTransNox»a.sIndstCdx",                
+               poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "",
+                "Transaction Date»Transaction No»Reference No",   
+                "dTransact»sTransNox»sReferNox",                  
+                "a.dTransact»a.sTransNox»a.sReferNox",            
                 1);
+
 
 
         if (poJSON != null) {
