@@ -273,15 +273,19 @@ public class StockRequest extends Transaction{
     
     
      /*Search Detail References*/
-   public JSONObject SearchModel(String value, boolean byCode, String brandId, int row,String industryID) throws SQLException, GuanzonException, NullPointerException {
+   public JSONObject SearchModel(String value, boolean byCode, String brandId, int row,String industryID,String categID) throws SQLException, GuanzonException, NullPointerException {
  
     InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
     object.getModel().setRecordStatus(RecordStatus.ACTIVE);
-    String categID = Master().getCategoryId();
-    System.out.println("Categ na tama" + categID);
+//    String categID = Master().getCategoryId();
+//    System.out.println("Categ na tama" + categID);
     
-    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
-    
+   
+    if(categID == ""){
+             poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID);
+        }else{
+          poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
+        }
     if ("success".equals((String) poJSON.get("result"))) {
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
@@ -311,14 +315,19 @@ public class StockRequest extends Transaction{
     return poJSON;
 }
 
- public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandID,String industryID)
+ public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandId,String industryID,String categID)
                throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
 
          InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
-         String categID = Master().getCategoryId();
-          System.out.println("Categ na tama" + categID);
-        poJSON = object.Inventory().searchRecord(value, byCode, null, brandID, industryID,categID);
+//         String categID = Master().getCategoryId();
+//          System.out.println("Categ na tama" + categID);
+        if(categID == ""){
+             poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID);
+        }else{
+         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
+        }
+       
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
@@ -341,13 +350,17 @@ public class StockRequest extends Transaction{
         return poJSON;
     
     }
-  public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row,String industry, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
+  public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row,String industryID, String brandId,String categID) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
             NullPointerException {
         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
-       
-         String categID = Master().getCategoryId();
-        poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industry,categID);
+        if(categID == ""){
+             poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID);
+        }else{
+         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industryID,categID);
+        }
+//         String categID = Master().getCategoryId();
+//        poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industry,categID);
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
@@ -399,7 +412,7 @@ public class StockRequest extends Transaction{
             Model item = detail.next(); // Store the item before checking conditions
 
             if ("".equals((String) item.getValue("sStockIDx"))
-                    || (int) item.getValue("nQuantity") <= 0) {
+                    || (double) item.getValue("nQuantity") <= 0) {
                 detail.remove(); // Correctly remove the item
             }
         }
@@ -466,7 +479,7 @@ public class StockRequest extends Transaction{
         
         return poJSON;
     }
-    public JSONObject isDetailHasZeroQty() {
+ public JSONObject isDetailHasZeroQty() {
         poJSON = new JSONObject();
         boolean allZeroQuantity = true;
         int tblRow = -1;
@@ -509,8 +522,8 @@ public class StockRequest extends Transaction{
     }
 
 
-
-       public JSONObject searchTransaction()throws CloneNotSupportedException,SQLException,GuanzonException {
+        
+       public JSONObject searchTransaction(String industryID,String categoryCode)throws CloneNotSupportedException,SQLException,GuanzonException {
           
         poJSON = new JSONObject();
         String lsTransStat = "";
@@ -527,13 +540,13 @@ public class StockRequest extends Transaction{
                 lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
             }
         }
-        System.out.print("COmpany id - "+Master().getCompanyID());
-        System.out.print("Category - "+Master().getCategoryId());
-        System.out.print("BRANCH CODE - "+poGRider.getBranchCode());
+
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
-               + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()) 
-               + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId()) 
+//        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
+        String lsSQLTry = SQL_BROWSE;
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(industryID)
+               //+ " AND a.sCompnyID = " + SQLUtil.toSQL(poGRider.getCompnyId())
+               + " AND a.sCategrCd = " + SQLUtil.toSQL(categoryCode) 
                +" AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 //                + " AND a.sSupplier LIKE " + SQLUtil.toSQL("%" + Master().getSupplierId()));
         if (psTranStat != null && !"".equals(psTranStat)) {
