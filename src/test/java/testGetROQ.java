@@ -45,10 +45,15 @@ public class testGetROQ {
             loROQ.beforeFirst();
             
             while(loROQ.next()){
+                String lsStockIDx = loROQ.getString("sStockIDx");
                 String lsModelNme = loROQ.getString("sModelNme");
+                double lnBackOrder = loROQ.getDouble("nBackOrdr");
+                double lnOnTransit = loROQ.getDouble("nOnTranst");
+                double lnReservedx = loROQ.getDouble("nResvOrdr");
+                double lnQOH = loROQ.getDouble("nQtyOnHnd");
                 double lnROQ = loROQ.getDouble("nRecOrder");
                 
-                System.out.println("Model: " + lsModelNme + ", ROQ: " + lnROQ);
+                System.out.println("Stock Id: "  +  lsStockIDx + ", Model: " + lsModelNme + ", BO: " + lnBackOrder + ", On Transit: " + lnOnTransit + ", Reserved Order: " + lnReservedx + ", QOH: " + lnQOH + ", ROQ: " + lnROQ);
             }
         } catch (SQLException e) {
             System.err.println(MiscUtil.getException(e));
