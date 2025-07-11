@@ -1,14 +1,11 @@
 
 
 import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.cas.inv.warehouse.StockRequest;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseControllers;
-import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.json.simple.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Assert;
