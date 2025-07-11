@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
@@ -33,6 +34,7 @@ import org.json.simple.parser.ParseException;
 public class StockRequest extends Transaction{   
     List<Model> mod;
     List<Model_Inv_Stock_Request_Master> paInvMaster;
+    static ROQ trans;
     public JSONObject InitTransaction(){      
         SOURCE_CODE = "InvR";
         
@@ -630,6 +632,49 @@ public void initSQL() {
         return loJSON;
     }
 
+
+      public JSONObject getROQItems() {
+    poJSON = new JSONObject();
+
+    try {
+        trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
+        JSONObject loResult = trans.LoadRecommendedOrder();
+
+        if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Unable to load ROQ: " + loResult.get("message"));
+            return poJSON;
+        }
+
+        CachedRowSet loROQ = trans.getRecommendations();
+        loROQ.last();
+        int totalROQ = loROQ.getRow();
+        loROQ.beforeFirst();
+        int index = 0;
+        while (loROQ.next()) {
+            String lsStockID = loROQ.getString("sStockIDx");
+            double lnROQ = loROQ.getDouble("nRecOrder");
+
+            int row = getDetailCount() - 1;
+            Detail(row).setStockId(lsStockID);
+            Detail(row).setRecommendedOrder(lnROQ);
+
+            index++;
+            if (index < totalROQ) {
+                AddDetail(); 
+            }
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "ROQ items added successfully.");
+        return poJSON;
+
+    } catch (Exception e) {
+        poJSON.put("result", "error");
+        poJSON.put("message", "Exception occurred: " + MiscUtil.getException(e));
+        return poJSON;
+    }
+}
 
 
 
