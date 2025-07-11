@@ -8,6 +8,7 @@ org\guanzon\cas\inv\warehouse\model\Model_Inv_Stock_Request_Master.class
 org\guanzon\cas\inv\warehouse\services\InvWarehouseControllers.class
 org\guanzon\cas\inv\warehouse\model\Model_Inv_Stock_Request_Detail.class
 org\guanzon\cas\inv\warehouse\validators\StockRequest_MP.class
+org\guanzon\cas\inv\warehouse\ROQ.class
 org\guanzon\cas\inv\warehouse\status\StockRequestStatus.class
 org\guanzon\cas\inv\warehouse\validators\StockRequest_LP.class
 org\guanzon\cas\inv\warehouse\validators\StockRequest_SP.class
