@@ -2,7 +2,6 @@ org\guanzon\cas\inv\warehouse\validators\StockRequestValidatorFactory.class
 org\guanzon\cas\inv\warehouse\validators\StockRequest_Vehicle.class
 org\guanzon\cas\inv\warehouse\validators\StockRequest_Hospitality.class
 org\guanzon\cas\inv\warehouse\services\InvWarehouseModels.class
-org\guanzon\cas\inv\warehouse\roq\ROQ.class
 org\guanzon\cas\inv\warehouse\StockRequest.class
 org\guanzon\cas\inv\warehouse\validators\StockRequest_MC.class
 org\guanzon\cas\inv\warehouse\model\Model_Inv_Stock_Request_Master.class
