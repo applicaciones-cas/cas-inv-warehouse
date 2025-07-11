@@ -1,5 +1,6 @@
 package org.guanzon.cas.inv.warehouse;
 
+import com.google.protobuf.DoubleValue;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -324,8 +325,7 @@ public class StockRequest extends Transaction{
                throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
 
          InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
-        object.setRecordStatus(RecordStatus.ACTIVE);
- 
+         object.setRecordStatus(RecordStatus.ACTIVE);
          poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
         
        
@@ -356,10 +356,9 @@ public class StockRequest extends Transaction{
         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
         
+        System.out.println("brand"+brandId+"indust"+Master().getIndustryId()+"categ"+Master().getCategoryId());
          poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
         
-//         String categID = Master().getCategoryId();
-//        poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, industry,categID);
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
@@ -411,8 +410,8 @@ public class StockRequest extends Transaction{
             Model item = detail.next(); // Store the item before checking conditions
 
             if ("".equals((String) item.getValue("sStockIDx"))
-                    || (double) item.getValue("nQuantity") <= 0) {
-                detail.remove(); // Correctly remove the item
+                || ((Number) item.getValue("nQuantity")).doubleValue() <= 0) {
+                 detail.remove(); // Correctly remove the item
             }
         }
 
@@ -536,11 +535,11 @@ public void initSQL() {
                 lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
             }
         }
-           System.out.println("CATEGGGGGG "+Master().getCategoryId());
+           
           
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
-               //+ " AND a.sCompnyID = " + SQLUtil.toSQL(poGRider.getCompnyId())
+               + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
                + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
                +" AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 //                + " AND a.sSupplier LIKE " + SQLUtil.toSQL("%" + Master().getSupplierId()));
@@ -589,7 +588,7 @@ public void initSQL() {
                  "FROM Inv_Stock_Request_Master a";
         String lsFilterCondition = String.join(" AND ",
                 " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId()),
-                //" a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId()),
                 " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferID));
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
