@@ -353,12 +353,41 @@ public class StockRequest extends Transaction{
         return poJSON;
     
     }
+ public JSONObject SearchBarcodeGeneral(String value, boolean byCode, int row, String brandId)
+               throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
+
+         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+         object.setRecordStatus(RecordStatus.ACTIVE);
+         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, null,Master().getCategoryId());
+        
+       
+        if ("success".equals((String) poJSON.get("result"))) {
+            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (lnRow != row) {
+                            if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
+                        && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
+                            double existingQty = Detail(lnRow).getQuantity();
+                            double newQty = existingQty + 1;
+                            Detail(lnRow).setQuantity(newQty);
+
+
+                            Detail(row).setStockId("");  
+                            poJSON.put("result", "merged");
+                            poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
+                    }
+                }
+            }
+            Detail(row).setStockId(object.Inventory().getModel().getStockId());
+            
+        }
+        return poJSON;
+    
+    }
   public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
             NullPointerException {
         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
         
-        System.out.println("brand"+brandId+"indust"+Master().getIndustryId()+"categ"+Master().getCategoryId());
          poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
         
         if ("success".equals((String) poJSON.get("result"))) {
@@ -383,7 +412,35 @@ public class StockRequest extends Transaction{
         }
         return poJSON;
     }
+public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, int row, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
+            NullPointerException {
+        InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        
+         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, null,Master().getCategoryId());
+        
+        if ("success".equals((String) poJSON.get("result"))) {
+            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (lnRow != row) {
+                    if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
+                        && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
+                        double existingQty = Detail(lnRow).getQuantity();
+                        double newQty = existingQty + 1;
+                        Detail(lnRow).setQuantity(newQty);
 
+
+                        Detail(row).setStockId("");  
+                        poJSON.put("result", "merged");
+                        poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
+                        return poJSON;
+                    }
+                }
+            }
+            Detail(row).setStockId(object.Inventory().getModel().getStockId());
+          
+        }
+        return poJSON;
+    }
     /*End - Search Detail References*/
        
     @Override
@@ -634,47 +691,47 @@ public void initSQL() {
 
 
       public JSONObject getROQItems() {
-    poJSON = new JSONObject();
+         poJSON = new JSONObject();
 
-    try {
-        trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
-        JSONObject loResult = trans.LoadRecommendedOrder();
+            try {
+                trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
+                JSONObject loResult = trans.LoadRecommendedOrder();
 
-        if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Unable to load ROQ: " + loResult.get("message"));
-            return poJSON;
-        }
+                if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Unable to load ROQ: " + loResult.get("message"));
+                    return poJSON;
+                }
 
-        CachedRowSet loROQ = trans.getRecommendations();
-        loROQ.last();
-        int totalROQ = loROQ.getRow();
-        loROQ.beforeFirst();
-        int index = 0;
-        while (loROQ.next()) {
-            String lsStockID = loROQ.getString("sStockIDx");
-            double lnROQ = loROQ.getDouble("nRecOrder");
+                CachedRowSet loROQ = trans.getRecommendations();
+                loROQ.last();
+                int totalROQ = loROQ.getRow();
+                loROQ.beforeFirst();
+                int index = 0;
+                while (loROQ.next()) {
+                    String lsStockID = loROQ.getString("sStockIDx");
+                    double lnROQ = loROQ.getDouble("nRecOrder");
 
-            int row = getDetailCount() - 1;
-            Detail(row).setStockId(lsStockID);
-            Detail(row).setRecommendedOrder(lnROQ);
+                    int row = getDetailCount() - 1;
+                    Detail(row).setStockId(lsStockID);
+                    Detail(row).setRecommendedOrder(lnROQ);
 
-            index++;
-            if (index < totalROQ) {
-                AddDetail(); 
+                    index++;
+                    if (index < totalROQ) {
+                        AddDetail(); 
+                    }
+                }
+
+                poJSON.put("result", "success");
+                poJSON.put("message", "ROQ items added successfully.");
+                return poJSON;
+
+            } catch (Exception e) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Exception occurred: " + MiscUtil.getException(e));
+                return poJSON;
             }
         }
-
-        poJSON.put("result", "success");
-        poJSON.put("message", "ROQ items added successfully.");
-        return poJSON;
-
-    } catch (Exception e) {
-        poJSON.put("result", "error");
-        poJSON.put("message", "Exception occurred: " + MiscUtil.getException(e));
-        return poJSON;
-    }
-}
 
 
 
