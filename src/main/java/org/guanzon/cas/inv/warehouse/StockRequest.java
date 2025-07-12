@@ -637,7 +637,7 @@ public void initSQL() {
     poJSON = new JSONObject();
 
     try {
-        trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
+        trans = new ROQ(poGRider, poGRider.getBranchCode(), "0003");
         JSONObject loResult = trans.LoadRecommendedOrder();
 
         if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
