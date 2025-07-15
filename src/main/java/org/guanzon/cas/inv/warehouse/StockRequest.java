@@ -93,6 +93,10 @@ public class StockRequest extends Transaction{
         poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
         if (!"success".equals((String) poJSON.get("result"))) return poJSON;
         
+          JSONObject loApproval = ShowDialogFX.getUserApproval(poGRider); 
+            if (!"success".equals((String) loApproval.get("result"))) {
+                return loApproval; // returns error or cancel message
+            }
         //change status
         poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
         
@@ -315,7 +319,6 @@ public class StockRequest extends Transaction{
         }
         
        Detail(row).setStockId(object.Inventory().getModel().getStockId());
-       Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId());
         
      
     }
@@ -324,122 +327,163 @@ public class StockRequest extends Transaction{
 }
 
  public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandId)
-               throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
+        throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
 
-         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
-         object.setRecordStatus(RecordStatus.ACTIVE);
-         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
-        
-       
-        if ("success".equals((String) poJSON.get("result"))) {
-            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-                if (lnRow != row) {
-                            if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
-                        && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
-                            double existingQty = Detail(lnRow).getQuantity();
-                            double newQty = existingQty + 1;
-                            Detail(lnRow).setQuantity(newQty);
+    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    object.setRecordStatus(RecordStatus.ACTIVE);
 
+    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId,
+            Master().getIndustryId(), Master().getCategoryId());
 
-                            Detail(row).setStockId("");  
-                            poJSON.put("result", "merged");
-                            poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
-                    }
+    if ("success".equals((String) poJSON.get("result"))) {
+        String stockId = object.Inventory().getModel().getStockId();
+
+        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+            if (lnRow != row) {
+                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                        && stockId.equals(Detail(lnRow).getStockId())) {
+
+                    double existingQty = Detail(lnRow).getQuantity();
+                    double newQty = existingQty + 1;
+                    Detail(lnRow).setQuantity(newQty);
+
+                    Detail(row).setStockId("");  
+
+                    poJSON.put("result", "merged");
+                    poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
+                    return poJSON;
                 }
             }
-            Detail(row).setStockId(object.Inventory().getModel().getStockId());
-            
         }
-        return poJSON;
-    
+
+        Detail(row).setStockId(stockId);
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "Barcode added successfully.");
     }
+
+    return poJSON;
+}
+
+
  public JSONObject SearchBarcodeGeneral(String value, boolean byCode, int row, String brandId)
-               throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
+        throws ExceptionInInitializerError, SQLException, GuanzonException,
+               CloneNotSupportedException, NullPointerException {
 
-         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
-         object.setRecordStatus(RecordStatus.ACTIVE);
-         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, null,Master().getCategoryId());
-        
-       
-        if ("success".equals((String) poJSON.get("result"))) {
-            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-                if (lnRow != row) {
-                            if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
-                        && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
-                            double existingQty = Detail(lnRow).getQuantity();
-                            double newQty = existingQty + 1;
-                            Detail(lnRow).setQuantity(newQty);
+    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    object.setRecordStatus(RecordStatus.ACTIVE);
 
+    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, null, Master().getCategoryId());
 
-                            Detail(row).setStockId("");  
-                            poJSON.put("result", "merged");
-                            poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
-                    }
+    if ("success".equals((String) poJSON.get("result"))) {
+        String stockId = object.Inventory().getModel().getStockId();
+
+        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+            if (lnRow != row) {
+                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                        && stockId.equals(Detail(lnRow).getStockId())) {
+
+                    double existingQty = Detail(lnRow).getQuantity();
+                    double newQty = existingQty + 1;
+                    Detail(lnRow).setQuantity(newQty);
+
+                    Detail(row).setStockId("");  
+                    poJSON.put("result", "merged");
+                    poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
+                    poJSON.put("updatedRow", lnRow);
+                    return poJSON; 
                 }
             }
-            Detail(row).setStockId(object.Inventory().getModel().getStockId());
-            
         }
-        return poJSON;
-    
+
+        Detail(row).setStockId(stockId);
+        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId());
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "Barcode added successfully.");
     }
-  public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
-            NullPointerException {
-        InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-        
-         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
-        
-        if ("success".equals((String) poJSON.get("result"))) {
-            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-                if (lnRow != row) {
-                    if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
-                        && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
-                        double existingQty = Detail(lnRow).getQuantity();
-                        double newQty = existingQty + 1;
-                        Detail(lnRow).setQuantity(newQty);
 
+    return poJSON;
+}
 
-                        Detail(row).setStockId("");  
-                        poJSON.put("result", "merged");
-                        poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
-                        return poJSON;
-                    }
+  public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row, String brandId)
+        throws ExceptionInInitializerError, SQLException, GuanzonException,
+               CloneNotSupportedException, NullPointerException {
+
+    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    object.setRecordStatus(RecordStatus.ACTIVE);
+
+    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId,
+            Master().getIndustryId(), Master().getCategoryId());
+
+    if ("success".equals((String) poJSON.get("result"))) {
+        String stockId = object.Inventory().getModel().getStockId();
+
+        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+            if (lnRow != row) {
+                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                        && stockId.equals(Detail(lnRow).getStockId())) {
+
+                    double existingQty = Detail(lnRow).getQuantity();
+                    double newQty = existingQty + 1;
+                    Detail(lnRow).setQuantity(newQty);
+
+                    Detail(row).setStockId(""); 
+                    poJSON.put("result", "merged");
+                    poJSON.put("message", "Description already exists at row " + (lnRow + 1) + ", quantity updated.");
+                    poJSON.put("updatedRow", lnRow); 
+                    return poJSON;
                 }
             }
-            Detail(row).setStockId(object.Inventory().getModel().getStockId());
-          
         }
-        return poJSON;
+
+        Detail(row).setStockId(stockId);
+        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId()); // optional
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "Description added successfully.");
     }
+
+    return poJSON;
+}
+
 public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, int row, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
             NullPointerException {
         InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-        
-         poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, null,Master().getCategoryId());
-        
-        if ("success".equals((String) poJSON.get("result"))) {
-            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-                if (lnRow != row) {
-                    if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
-                        && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
-                        double existingQty = Detail(lnRow).getQuantity();
-                        double newQty = existingQty + 1;
-                        Detail(lnRow).setQuantity(newQty);
+    object.setRecordStatus(RecordStatus.ACTIVE);
 
+    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId,
+            null, Master().getCategoryId());
 
-                        Detail(row).setStockId("");  
-                        poJSON.put("result", "merged");
-                        poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
-                        return poJSON;
-                    }
+    if ("success".equals((String) poJSON.get("result"))) {
+        String stockId = object.Inventory().getModel().getStockId();
+
+        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+            if (lnRow != row) {
+                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                        && stockId.equals(Detail(lnRow).getStockId())) {
+
+                    double existingQty = Detail(lnRow).getQuantity();
+                    double newQty = existingQty + 1;
+                    Detail(lnRow).setQuantity(newQty);
+
+                    Detail(row).setStockId(""); 
+                    poJSON.put("result", "merged");
+                    poJSON.put("message", "Description already exists at row " + (lnRow + 1) + ", quantity updated.");
+                    poJSON.put("updatedRow", lnRow); 
+                    return poJSON;
                 }
             }
-            Detail(row).setStockId(object.Inventory().getModel().getStockId());
-          
         }
-        return poJSON;
+
+        Detail(row).setStockId(stockId);
+        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId()); // optional
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "Description added successfully.");
+    }
+
+    return poJSON;
     }
     /*End - Search Detail References*/
        

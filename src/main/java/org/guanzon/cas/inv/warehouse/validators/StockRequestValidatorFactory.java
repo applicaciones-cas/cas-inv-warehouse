@@ -15,6 +15,8 @@ public class StockRequestValidatorFactory {
                 return new StockRequest_Hospitality();
             case "05": //Los Pedritos
                 return new StockRequest_LP();
+            case "07":
+                return new StockRequest_Appliances();
             default:
                 return null;
         }
