@@ -15,6 +15,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.InvMaster;
 import org.guanzon.cas.inv.services.InvControllers;
@@ -76,9 +77,9 @@ public class StockRequest extends Transaction{
         
         String lsStatus = StockRequestStatus.CONFIRMED;
         boolean lbConfirm = true;
-        
+      
         if (getEditMode() != EditMode.READY){
-            poJSON.put("result", "error");
+             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
             return poJSON;                
         }
@@ -91,16 +92,24 @@ public class StockRequest extends Transaction{
         
         //validator
         poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
-          JSONObject loApproval = ShowDialogFX.getUserApproval(poGRider); 
-            if (!"success".equals((String) loApproval.get("result"))) {
-                return loApproval; // returns error or cancel message
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
             }
+        }
+        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+
         //change status
         poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
-        
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
         
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -398,6 +407,7 @@ public class StockRequest extends Transaction{
 
         Detail(row).setStockId(stockId);
         Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId());
+        
 
         poJSON.put("result", "success");
         poJSON.put("message", "Barcode added successfully.");
@@ -438,7 +448,6 @@ public class StockRequest extends Transaction{
         }
 
         Detail(row).setStockId(stockId);
-        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId()); // optional
 
         poJSON.put("result", "success");
         poJSON.put("message", "Description added successfully.");
@@ -477,7 +486,6 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         }
 
         Detail(row).setStockId(stockId);
-        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId()); // optional
 
         poJSON.put("result", "success");
         poJSON.put("message", "Description added successfully.");
