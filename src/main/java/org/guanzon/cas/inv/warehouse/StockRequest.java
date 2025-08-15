@@ -35,6 +35,7 @@ import org.json.simple.parser.ParseException;
 public class StockRequest extends Transaction{   
     List<Model> mod;
     List<Model_Inv_Stock_Request_Master> paInvMaster;
+    
     static ROQ trans;
     public JSONObject InitTransaction(){      
         SOURCE_CODE = "InvR";
@@ -575,16 +576,38 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         return poJSON;
     }
     
-
+    @SuppressWarnings("unchecked")
+    public List<Model_Inv_Stock_Request_Detail> getDetailList() {
+        System.out.print("GET DETAIL LIST");
+        return (List<Model_Inv_Stock_Request_Detail>) (List<?>) paDetail;
+    }
 
     @Override
     protected JSONObject isEntryOkay(String status){
+        System.out.println("IS ENTRY OK?");
         GValidator loValidator = StockRequestValidatorFactory.make(Master().getIndustryId());
         
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
-        
+        loValidator.setMaster(poMaster);
+        ArrayList laDetailList = new ArrayList<>(getDetailList());
+        loValidator.setDetail(laDetailList);
         poJSON = loValidator.validate();
+        
+        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                } else {
+                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
+                }
+            }
+        }
         
         return poJSON;
     }

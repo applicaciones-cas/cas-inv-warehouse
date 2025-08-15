@@ -1,6 +1,9 @@
 package org.guanzon.cas.inv.warehouse.validators;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
@@ -50,7 +53,14 @@ public class StockRequest_Appliances implements GValidator{
             case StockRequestStatus.OPEN:
                 return validateNew();
             case StockRequestStatus.CONFIRMED:
-                return validateConfirmed();
+            {
+                try {
+                    return validateConfirmed();
+                } catch (SQLException ex) {
+                    Logger.getLogger(StockRequest_Appliances.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+
             case StockRequestStatus.PROCESSED:
                 return validateProcessed();
             case StockRequestStatus.CANCELLED:
@@ -72,10 +82,44 @@ public class StockRequest_Appliances implements GValidator{
         return poJSON;
     }
     
-    private JSONObject validateConfirmed(){
+    private JSONObject validateConfirmed() throws SQLException {
         poJSON = new JSONObject();
-                
+        boolean isRequiredApproval = false;
+
+        if (poMaster.getTransactionDate() == null) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Transaction Date.");
+            return poJSON;
+        }
+
+        if (poMaster.getIndustryId() == null) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Industry is not set.");
+            return poJSON;
+        }
+        if (poMaster.getCompanyID() == null || poMaster.getCompanyID().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Company is not set.");
+            return poJSON;
+        }
+
+        int lnDetailCount = 0;
+        for (int lnCtr = 0; lnCtr < poDetail.size(); lnCtr++) {
+            if (poDetail.get(lnCtr).getStockId() != null
+                    && !poDetail.get(lnCtr).getStockId().isEmpty()) {
+                lnDetailCount++;
+            }
+        }
+
+        if (lnDetailCount <= 0) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Detail is not set.");
+            return poJSON;
+        }
+
         poJSON.put("result", "success");
+        poJSON.put("isRequiredApproval", isRequiredApproval);
+
         return poJSON;
     }
     
