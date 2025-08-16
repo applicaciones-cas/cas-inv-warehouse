@@ -10,7 +10,7 @@ import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.json.simple.JSONObject;
-
+import java.util.Date;
 public class StockRequest_MC implements GValidator{
     GRiderCAS poGrider;
     String psTranStat;
@@ -38,10 +38,7 @@ public class StockRequest_MC implements GValidator{
     @SuppressWarnings("unchecked")
     @Override
     public void setDetail(ArrayList<Object> value) {
-        poDetail.clear();
-        for(int lnCtr = 0; lnCtr <= value.size() - 1; lnCtr++){
-            poDetail.add((Model_Inv_Stock_Request_Detail) value.get(lnCtr));
-        }
+        poDetail = (ArrayList<Model_Inv_Stock_Request_Detail>) (ArrayList<?>) value;
     }
 
     @Override
@@ -51,16 +48,13 @@ public class StockRequest_MC implements GValidator{
 
     @Override
     public JSONObject validate() {
+        try {
         switch (psTranStat){
             case StockRequestStatus.OPEN:
                 return validateNew();
             case StockRequestStatus.CONFIRMED:
             {
-                try {
                     return validateConfirmed();
-                } catch (SQLException ex) {
-                    Logger.getLogger(StockRequest_Appliances.class.getName()).log(Level.SEVERE, null, ex);
-                }
             }
 
             case StockRequestStatus.PROCESSED:
@@ -72,17 +66,58 @@ public class StockRequest_MC implements GValidator{
             default:
                 poJSON = new JSONObject();
                 poJSON.put("result", "success");
+        } } catch (SQLException ex) {
+            Logger.getLogger(StockRequest_MC.class.getName()).log(Level.SEVERE, null, ex);
         }
         
         return poJSON;
     }
     
-    private JSONObject validateNew(){
+    private JSONObject validateNew() throws SQLException {
         poJSON = new JSONObject();
-                
+        boolean isRequiredApproval = false;
+
+        if (poMaster.getTransactionDate() == null) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Transaction Date.");
+            return poJSON;
+        }
+
+        //change transaction date 
+        if (poMaster.getTransactionDate().after((Date) poGrider.getServerDate())
+                && poMaster.getTransactionDate().before((Date) poGrider.getServerDate())) {
+            poJSON.put("message", "Change of transaction date are not allowed.! Approval is Required");
+            isRequiredApproval = true;
+        }
+
+        
+
+        if (poMaster.getBranchCode() == null || poMaster.getBranchCode().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Branch is not set.");
+            return poJSON;
+        }
+
+        int lnDetailCount = 0;
+        for (int lnCtr = 0; lnCtr < poDetail.size(); lnCtr++) {
+            if (poDetail.get(lnCtr).getStockId()!= null
+                    && !poDetail.get(lnCtr).getStockId().isEmpty()) {
+                lnDetailCount++;
+            }
+        }
+
+        if (lnDetailCount <= 0) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Detail is not set.");
+            return poJSON;
+        }
+
         poJSON.put("result", "success");
+        poJSON.put("isRequiredApproval", isRequiredApproval);
+
         return poJSON;
     }
+
     
     private JSONObject validateConfirmed() throws SQLException {
         poJSON = new JSONObject();

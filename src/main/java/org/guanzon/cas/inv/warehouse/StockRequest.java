@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -32,8 +33,7 @@ import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
-public class StockRequest extends Transaction{   
-    List<Model> mod;
+public class StockRequest extends Transaction{  
     List<Model_Inv_Stock_Request_Master> paInvMaster;
     
     static ROQ trans;
@@ -98,10 +98,11 @@ public class StockRequest extends Transaction{
         }
 
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+             poJSON = ShowDialogFX.getUserApproval(poGRider);
+             if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                ShowMessageFX.Warning((String) poJSON.get("message"), null, null);
                 return poJSON;
-            }
+             }
         }
         poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
 
@@ -579,6 +580,10 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
     @SuppressWarnings("unchecked")
     public List<Model_Inv_Stock_Request_Detail> getDetailList() {
         System.out.print("GET DETAIL LIST");
+        System.out.println("paDetail = " + paDetail);
+        System.out.println("paDetail class = " + (paDetail != null ? paDetail.getClass() : "null"));
+        System.out.println("paDetail size = " + (paDetail != null ? paDetail.size() : "null"));
+
         return (List<Model_Inv_Stock_Request_Detail>) (List<?>) paDetail;
     }
 
@@ -592,6 +597,7 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         loValidator.setMaster(poMaster);
         ArrayList laDetailList = new ArrayList<>(getDetailList());
         loValidator.setDetail(laDetailList);
+
         poJSON = loValidator.validate();
         
         if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
@@ -611,6 +617,39 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         
         return poJSON;
     }
+//    @SuppressWarnings("unchecked")
+//    public List<Model_Delivery_Schedule_Detail> getDetailList() {
+//        return (List<Model_Delivery_Schedule_Detail>) (List<?>) paDetail;
+//    }
+//
+//@Override
+//    protected JSONObject isEntryOkay(String status) {
+//        GValidator loValidator = DeliveryScheduleValidatorFactory.make(getMaster().getIndustryId());
+//
+//        loValidator.setApplicationDriver(poGRider);
+//        loValidator.setTransactionStatus(status);
+//        loValidator.setMaster(poMaster);
+//        ArrayList laDetailList = new ArrayList<>(getDetailList());
+//        loValidator.setDetail(laDetailList);
+//
+//        poJSON = loValidator.validate();
+//        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//                poJSON = ShowDialogFX.getUserApproval(poGRider);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                } else {
+//                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "User is not an authorized approving officer.");
+//                        return poJSON;
+//                    }
+//                }
+//            }
+//        }
+//
+//        return poJSON;
+//    }
  public JSONObject isDetailHasZeroQty() {
         poJSON = new JSONObject();
         boolean allZeroQuantity = true;
