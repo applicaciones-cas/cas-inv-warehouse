@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -15,6 +16,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.InvMaster;
 import org.guanzon.cas.inv.services.InvControllers;
@@ -31,9 +33,9 @@ import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
-public class StockRequest extends Transaction{   
-    List<Model> mod;
+public class StockRequest extends Transaction{  
     List<Model_Inv_Stock_Request_Master> paInvMaster;
+    
     static ROQ trans;
     public JSONObject InitTransaction(){      
         SOURCE_CODE = "InvR";
@@ -76,9 +78,9 @@ public class StockRequest extends Transaction{
         
         String lsStatus = StockRequestStatus.CONFIRMED;
         boolean lbConfirm = true;
-        
+      
         if (getEditMode() != EditMode.READY){
-            poJSON.put("result", "error");
+             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
             return poJSON;                
         }
@@ -91,16 +93,25 @@ public class StockRequest extends Transaction{
         
         //validator
         poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
-          JSONObject loApproval = ShowDialogFX.getUserApproval(poGRider); 
-            if (!"success".equals((String) loApproval.get("result"))) {
-                return loApproval; // returns error or cancel message
-            }
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+             poJSON = ShowDialogFX.getUserApproval(poGRider);
+             if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                ShowMessageFX.Warning((String) poJSON.get("message"), null, null);
+                return poJSON;
+             }
+        }
+        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+
         //change status
         poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
-        
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
         
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -398,6 +409,7 @@ public class StockRequest extends Transaction{
 
         Detail(row).setStockId(stockId);
         Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId());
+        
 
         poJSON.put("result", "success");
         poJSON.put("message", "Barcode added successfully.");
@@ -438,7 +450,6 @@ public class StockRequest extends Transaction{
         }
 
         Detail(row).setStockId(stockId);
-        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId()); // optional
 
         poJSON.put("result", "success");
         poJSON.put("message", "Description added successfully.");
@@ -477,7 +488,6 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         }
 
         Detail(row).setStockId(stockId);
-        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId()); // optional
 
         poJSON.put("result", "success");
         poJSON.put("message", "Description added successfully.");
@@ -567,19 +577,47 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         return poJSON;
     }
     
+    @SuppressWarnings("unchecked")
+    public List<Model_Inv_Stock_Request_Detail> getDetailList() {
+        System.out.print("GET DETAIL LIST");
+        System.out.println("paDetail = " + paDetail);
+        System.out.println("paDetail class = " + (paDetail != null ? paDetail.getClass() : "null"));
+        System.out.println("paDetail size = " + (paDetail != null ? paDetail.size() : "null"));
 
+        return (List<Model_Inv_Stock_Request_Detail>) (List<?>) paDetail;
+    }
 
     @Override
     protected JSONObject isEntryOkay(String status){
+        System.out.println("IS ENTRY OK?");
         GValidator loValidator = StockRequestValidatorFactory.make(Master().getIndustryId());
         
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
-        
+        loValidator.setMaster(poMaster);
+        ArrayList laDetailList = new ArrayList<>(getDetailList());
+        loValidator.setDetail(laDetailList);
+
         poJSON = loValidator.validate();
+        
+        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                } else {
+                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
+                }
+            }
+        }
         
         return poJSON;
     }
+
  public JSONObject isDetailHasZeroQty() {
         poJSON = new JSONObject();
         boolean allZeroQuantity = true;
@@ -633,6 +671,7 @@ public void initSQL() {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                     lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
                 }
+               
                 lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
             } else {
                 lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
@@ -737,9 +776,9 @@ public void initSQL() {
       public JSONObject getROQItems() {
          poJSON = new JSONObject();
 
-            try {
-                trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
-                JSONObject loResult = trans.LoadRecommendedOrder();
+    try {
+        trans = new ROQ(poGRider, poGRider.getBranchCode(), "0003");
+        JSONObject loResult = trans.LoadRecommendedOrder();
 
                 if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
                     poJSON.put("result", "error");

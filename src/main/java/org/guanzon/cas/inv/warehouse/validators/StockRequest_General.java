@@ -12,7 +12,7 @@ import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.json.simple.JSONObject;
 
-public class StockRequest_Vehicle implements GValidator{
+public class StockRequest_General implements GValidator{
     GRiderCAS poGrider;
     String psTranStat;
     JSONObject poJSON;
@@ -68,7 +68,7 @@ public class StockRequest_Vehicle implements GValidator{
                 poJSON = new JSONObject();
                 poJSON.put("result", "success");
         } } catch (SQLException ex) {
-            Logger.getLogger(StockRequest_Vehicle.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(StockRequest_General.class.getName()).log(Level.SEVERE, null, ex);
         }
         
         return poJSON;
