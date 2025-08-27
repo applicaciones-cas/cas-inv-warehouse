@@ -6,6 +6,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
@@ -35,7 +37,7 @@ import org.json.simple.parser.ParseException;
 
 public class StockRequest extends Transaction{  
     List<Model_Inv_Stock_Request_Master> paInvMaster;
-    
+    List<StockRequest> poStockRequest;
     static ROQ trans;
     public JSONObject InitTransaction(){      
         SOURCE_CODE = "InvR";
@@ -73,6 +75,37 @@ public class StockRequest extends Transaction{
     private Model_Inv_Stock_Request_Master INVMasterList() {
         return new InvWarehouseModels(poGRider).InventoryStockRequestMaster();
     }
+    private JSONObject saveUpdates(String status)
+            throws CloneNotSupportedException {
+        poJSON = new JSONObject();
+        int lnCtr;
+        try {
+            for (lnCtr = 0; lnCtr <= poStockRequest.size() - 1; lnCtr++) {
+                if (StockRequestStatus.CONFIRMED.equals(status)) {
+                    poStockRequest.get(lnCtr).Master().setProcessed(true);
+                }
+                poStockRequest.get(lnCtr).Master().setModifyingId(poGRider.getUserID());
+                poStockRequest.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
+                poStockRequest.get(lnCtr).setWithParent(true);
+                poJSON = poStockRequest.get(lnCtr).SaveTransaction();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    System.out.println("Stock Request Saving " + (String) poJSON.get("message"));
+                    return poJSON;
+
+                }
+            }
+
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(StockRequest.class
+                    .getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         
@@ -104,15 +137,21 @@ public class StockRequest extends Transaction{
                 return poJSON;
              }
         }
-        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+        poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
 
-        //change status
-        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
         }
-        
+        poJSON = saveUpdates(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         
@@ -148,7 +187,21 @@ public class StockRequest extends Transaction{
         poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
         
         if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
+        poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
+
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+        poJSON = saveUpdates(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         
@@ -181,10 +234,21 @@ public class StockRequest extends Transaction{
         if (!"success".equals((String) poJSON.get("result"))) return poJSON;
         
         //change status
-        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
-        
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
+        poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
+
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+        poJSON = saveUpdates(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         
@@ -217,10 +281,21 @@ public class StockRequest extends Transaction{
         if (!"success".equals((String) poJSON.get("result"))) return poJSON;
         
         //change status
-        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
-        
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
+        poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
+
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+        poJSON = saveUpdates(StockRequestStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         
@@ -783,6 +858,7 @@ public void initSQL() {
                 // Print the result set
                 System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                 System.out.println("dTransact: " + loRS.getDate("dTransact"));
+                System.out.println("sReferNox" + loRS.getString("sReferNox"));
                 System.out.println("------------------------------------------------------------------------------");
 
                 paInvMaster.add(INVMasterList());
