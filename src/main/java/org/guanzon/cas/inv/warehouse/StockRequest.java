@@ -45,7 +45,7 @@ public class StockRequest extends Transaction{
         poMaster = new InvWarehouseModels(poGRider).InventoryStockRequestMaster();
         poDetail = new InvWarehouseModels(poGRider).InventoryStockRequestDetail();
         paDetail = new ArrayList<>();        
-        
+        poStockRequest = new ArrayList<>();
       
         return initialize();
     }
@@ -79,11 +79,14 @@ public class StockRequest extends Transaction{
             throws CloneNotSupportedException {
         poJSON = new JSONObject();
         int lnCtr;
+        
         try {
             for (lnCtr = 0; lnCtr <= poStockRequest.size() - 1; lnCtr++) {
                 if (StockRequestStatus.CONFIRMED.equals(status)) {
                     poStockRequest.get(lnCtr).Master().setProcessed(true);
                 }
+                System.out.println("ts1" + poGRider.getUserID());
+                System.out.println("ts2" + poGRider.getServerDate());
                 poStockRequest.get(lnCtr).Master().setModifyingId(poGRider.getUserID());
                 poStockRequest.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
                 poStockRequest.get(lnCtr).setWithParent(true);
@@ -149,14 +152,14 @@ public class StockRequest extends Transaction{
             poGRider.rollbackTrans();
             return poJSON;
         }
-
         poGRider.commitTrans();
-
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         
-        if (lbConfirm) poJSON.put("message", "Transaction confirmed successfully.");
-        else poJSON.put("message", "Transaction confirmation request submitted successfully.");
+        if (lbConfirm) {
+        poJSON.put("message", "Transaction confirmed successfully.");
+        }
+        else {poJSON.put("message", "Transaction confirmation request submitted successfully.");}
         
         return poJSON;
     }
@@ -693,34 +696,48 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         return poJSON;
     }
 
- public JSONObject isDetailHasZeroQty() {
+  public JSONObject isDetailHasZeroQty() {
         poJSON = new JSONObject();
-        boolean allZeroQuantity = true;
-        int tblRow = -1;
+        int zeroQtyRow = -1;
+        boolean hasNonZeroQty = false;
+        boolean hasZeroQty = false;
+        int lastRow = getDetailCount() - 1;
 
-        for (int lnRow = 0; lnRow < getDetailCount() - 1; lnRow++) {
+        for (int lnRow = 0; lnRow <= lastRow; lnRow++) {
             double quantity = Detail(lnRow).getQuantity();
             String stockID = (String) Detail(lnRow).getValue("sStockIDx");
 
             if (!stockID.isEmpty()) {
-                if (quantity != 0) {
-                    allZeroQuantity = false;  // Found at least one item with non-zero quantity
-                } else if (tblRow == -1) {
-                    tblRow = lnRow;  // Capture the first row with zero quantity
+                if (quantity == 0.00) {
+                    hasZeroQty = true;
+                    if (zeroQtyRow == -1) {
+                        zeroQtyRow = lnRow;
+                    }
+                } else {
+                    hasNonZeroQty = true;
                 }
             }
         }
 
-        if (allZeroQuantity) {
-            poJSON.put("result", "success");
-        } else {
+        if (!hasNonZeroQty && hasZeroQty) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Some items have non-zero quantity. Do you want to proceed anyway?");
-            poJSON.put("tableRow", tblRow);
+            poJSON.put("message", "All items have zero quantity. Please enter a valid quantity.");
+            poJSON.put("tableRow", zeroQtyRow);
+            poJSON.put("warning", "true");
+        } else if (hasZeroQty) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Some items have zero quantity. Please review.");
+            poJSON.put("tableRow", zeroQtyRow);
+            poJSON.put("warning", "false");
+        } else {
+            poJSON.put("result", "success");
+            poJSON.put("message", "All items have valid quantities.");
+            poJSON.put("tableRow", lastRow);
         }
 
         return poJSON;
-}
+    }
+
     
     
                   
@@ -853,7 +870,7 @@ public void initSQL() {
          poJSON = new JSONObject();
 
     try {
-        trans = new ROQ(poGRider, poGRider.getBranchCode(), "0003");
+        trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
         JSONObject loResult = trans.LoadRecommendedOrder();
 
                 if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
@@ -880,9 +897,10 @@ public void initSQL() {
                         AddDetail(); 
                     }
                 }
-
+                System.out.println(totalROQ + "total roq");
                 poJSON.put("result", "success");
                 poJSON.put("message", "ROQ items added successfully.");
+                
                 return poJSON;
 
             } catch (Exception e) {
