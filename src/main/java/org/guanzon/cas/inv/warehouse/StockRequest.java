@@ -752,7 +752,57 @@ public void initSQL() {
 }
 
 
-        
+        public JSONObject searchTransaction(boolean searchRef) throws CloneNotSupportedException, SQLException, GuanzonException {
+            poJSON = new JSONObject();
+            String lsTransStat = "";
+
+            if (psTranStat != null) {
+                if (psTranStat.length() > 1) {
+                    for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                        lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+                    }
+                    lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+                } else {
+                    lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+                }
+            }
+
+            initSQL();
+            String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                    " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
+                  + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
+                  + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
+                  + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+
+            // ✅ If searchRef = true, only show transactions with reference numbers
+            if (searchRef) {
+                lsSQL = MiscUtil.addCondition(lsSQL, "a.sReferNox IS NOT NULL AND a.sReferNox <> ''");
+            }
+
+            if (psTranStat != null && !"".equals(psTranStat)) {
+                lsSQL = lsSQL + lsTransStat;
+            }
+
+            System.out.println("Executing SQL: " + lsSQL);
+
+            poJSON = ShowDialogFX.Browse(poGRider,
+                    lsSQL,
+                    "",
+                    "Transaction Date»Transaction No»Reference No",
+                    "dTransact»sTransNox»sReferNox",
+                    "a.dTransact»a.sTransNox»a.sReferNox",
+                    1);
+
+            if (poJSON != null) {
+                return OpenTransaction((String) poJSON.get("sTransNox"));
+            } else {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "No record loaded.");
+                return poJSON;
+            }
+        }
+
        public JSONObject searchTransaction()throws CloneNotSupportedException,SQLException,GuanzonException {
           
         poJSON = new JSONObject();
