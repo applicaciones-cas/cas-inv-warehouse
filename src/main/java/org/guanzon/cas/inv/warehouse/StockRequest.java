@@ -774,7 +774,7 @@ public void initSQL() {
                   + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
                   + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 
-            // ✅ If searchRef = true, only show transactions with reference numbers
+          
             if (searchRef) {
                 lsSQL = MiscUtil.addCondition(lsSQL, "a.sReferNox IS NOT NULL AND a.sReferNox <> ''");
             }
