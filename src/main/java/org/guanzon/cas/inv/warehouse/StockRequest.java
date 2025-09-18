@@ -280,7 +280,7 @@ public class StockRequest extends Transaction{
         }
         
         //validator
-        poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
+        poJSON = isEntryOkay(StockRequestStatus.VOID);
         if (!"success".equals((String) poJSON.get("result"))) return poJSON;
         
         //change status
