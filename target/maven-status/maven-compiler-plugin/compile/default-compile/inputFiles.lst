@@ -1,6 +1,7 @@
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\Inv_Stock_Request_Cancel.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\status\StockRequestStatus.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\model\Model_Inv_Stock_Request_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequest_Appliances.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequest_Hospitality.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequest_MC.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\ROQ.java
@@ -8,6 +9,7 @@ D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\ca
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\StockRequest.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequest_LP.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequest_MP.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequest_General.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequest_Vehicle.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\model\Model_Inv_Stock_Request_Cancel_Master.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-inv-warehouse\src\main\java\org\guanzon\cas\inv\warehouse\validators\StockRequestValidatorFactory.java

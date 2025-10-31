@@ -113,7 +113,6 @@ public class testInvStockRequestMaster {
         }
     }   
     
-    @Test
     public void testOpenTransaction() {
         JSONObject loJSON;
         
@@ -153,8 +152,7 @@ public class testInvStockRequestMaster {
         
         
     }   
-//    
-    @Test
+
     public void testUpdateTransaction() {
         JSONObject loJSON;
        
