@@ -21,6 +21,7 @@ import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.InvMaster;
+import org.guanzon.cas.inv.Inventory;
 import org.guanzon.cas.inv.services.InvControllers;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
@@ -381,17 +382,17 @@ public class StockRequest extends Transaction{
      /*Search Detail References*/
    public JSONObject SearchModel(String value, boolean byCode, String brandId, int row) throws SQLException, GuanzonException, NullPointerException {
  
-    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
     object.getModel().setRecordStatus(RecordStatus.ACTIVE);
 
         
-          poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
+          poJSON = object.searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
         
     if ("success".equals((String) poJSON.get("result"))) {
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
                 if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
-                        && (Detail(lnRow).getStockId().equals(object.Inventory().getModel().getStockId()))) {
+                        && (Detail(lnRow).getStockId().equals(object.getModel().getStockId()))) {
                     
                     
                     double existingQty = Detail(lnRow).getQuantity();
@@ -407,7 +408,7 @@ public class StockRequest extends Transaction{
             }
         }
         
-       Detail(row).setStockId(object.Inventory().getModel().getStockId());
+       Detail(row).setStockId(object.getModel().getStockId());
         
      
     }
@@ -418,14 +419,14 @@ public class StockRequest extends Transaction{
  public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandId)
         throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
 
-    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
     object.setRecordStatus(RecordStatus.ACTIVE);
 
-    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId,
+    poJSON = object.searchRecord(value, byCode, null, brandId,
             Master().getIndustryId(), Master().getCategoryId());
 
     if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.Inventory().getModel().getStockId();
+        String stockId = object.getModel().getStockId();
 
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
@@ -459,13 +460,13 @@ public class StockRequest extends Transaction{
         throws ExceptionInInitializerError, SQLException, GuanzonException,
                CloneNotSupportedException, NullPointerException {
 
-    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
     object.setRecordStatus(RecordStatus.ACTIVE);
 
-    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId, null, Master().getCategoryId());
+    poJSON = object.searchRecord(value, byCode, null, brandId, null, Master().getCategoryId());
 
     if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.Inventory().getModel().getStockId();
+        String stockId = object.getModel().getStockId();
 
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
@@ -486,7 +487,7 @@ public class StockRequest extends Transaction{
         }
 
         Detail(row).setStockId(stockId);
-        Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId());
+        Detail(row).setCategoryCode(object.getModel().getCategoryFirstLevelId());
         
 
         poJSON.put("result", "success");
@@ -500,14 +501,14 @@ public class StockRequest extends Transaction{
         throws ExceptionInInitializerError, SQLException, GuanzonException,
                CloneNotSupportedException, NullPointerException {
 
-    InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
     object.setRecordStatus(RecordStatus.ACTIVE);
 
-    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId,
+    poJSON = object.searchRecord(value, byCode, null, brandId,
             Master().getIndustryId(), Master().getCategoryId());
 
     if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.Inventory().getModel().getStockId();
+        String stockId = object.getModel().getStockId();
 
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
@@ -538,14 +539,14 @@ public class StockRequest extends Transaction{
 
 public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, int row, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
             NullPointerException {
-        InvMaster object = new InvControllers(poGRider, logwrapr).InventoryMaster();
+        Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
     object.setRecordStatus(RecordStatus.ACTIVE);
 
-    poJSON = object.Inventory().searchRecord(value, byCode, null, brandId,
+    poJSON = object.searchRecord(value, byCode, null, brandId,
             null, Master().getCategoryId());
 
     if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.Inventory().getModel().getStockId();
+        String stockId = object.getModel().getStockId();
 
         for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
             if (lnRow != row) {
