@@ -458,13 +458,14 @@ public class ReportUtil {
     }
 
     private JSONObject showUI() throws JRException, SQLException {
-        URL fxURLResource = getClass().getResource(
-                "/ph/com/guanzongroup/cas/inv/warehouse/t4/report/view/ReportUtilView.fxml"
+       
+        ReportUtilViewController loController = new ReportUtilViewController();
+         URL fxURLResource = loController.getClass().getResource(
+                "/org/guanzon/cas/inv/warehouse/report/view/ReportUtilView.fxml"
         );
         FXMLLoader fxmlLoader = new FXMLLoader(fxURLResource);
         fxmlLoader.setLocation(fxURLResource);
 
-        ReportUtilViewController loController = new ReportUtilViewController();
         loController.setApplicationDriver(poGRider);
         loController.setJasperPath(psJasperPath);
         loController.setJasperPrint(reportPrint);
