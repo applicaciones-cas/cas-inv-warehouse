@@ -44,7 +44,23 @@ public class StockRequest extends Transaction {
 
     List<Model_Inv_Stock_Request_Master> paInvMaster;
     List<StockRequest> poStockRequest;
-    static ROQ trans;
+    static ROQ poStockROQ;
+
+    private String psIndustryCode = "";
+    private String psCompanyID = "";
+    private String psCategorCD = "";
+
+    public void setIndustryID(String industryId) {
+        psIndustryCode = industryId;
+    }
+
+    public void setCompanyID(String companyId) {
+        psCompanyID = companyId;
+    }
+
+    public void setCategoryID(String categoryId) {
+        psCategorCD = categoryId;
+    }
 
     public JSONObject InitTransaction() {
         SOURCE_CODE = InvTransCons.INVENTORY_STOCK_REQUEST;
@@ -58,7 +74,17 @@ public class StockRequest extends Transaction {
     }
 
     public JSONObject NewTransaction() throws CloneNotSupportedException {
-        return newTransaction();
+        poJSON = new JSONObject();
+        poJSON = newTransaction();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        Master().setIndustryId(psIndustryCode);
+        Master().setCompanyID(psCompanyID);
+        Master().setCategoryId(psCategorCD);
+        Master().setBranchCode(poGRider.getBranchCode());
+        return poJSON;
     }
 
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
@@ -942,9 +968,9 @@ public class StockRequest extends Transaction {
 
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
-                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
-                + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
-                + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
+                " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyID)
+                + " AND a.sCategrCd = " + SQLUtil.toSQL(psCategorCD)
                 + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 
         if (searchRef) {
@@ -993,9 +1019,9 @@ public class StockRequest extends Transaction {
         }
 
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(ps)
-                + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
-                + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyID)
+                + " AND a.sCategrCd = " + SQLUtil.toSQL(psCategorCD)
                 + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 //                + " AND a.sSupplier LIKE " + SQLUtil.toSQL("%" + Master().getSupplierId()));
         if (psTranStat != null && !"".equals(psTranStat)) {
@@ -1041,9 +1067,9 @@ public class StockRequest extends Transaction {
                 + "  a.sReferNox "
                 + "FROM Inv_Stock_Request_Master a";
         String lsFilterCondition = String.join(" AND ",
-                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId()),
-                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
-                " a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId()),
+                " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode),
+                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyID),
+                " a.sCategrCd = " + SQLUtil.toSQL(psCategorCD),
                 " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferID));
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
         if (!psTranStat.isEmpty()) {
@@ -1089,8 +1115,8 @@ public class StockRequest extends Transaction {
         poJSON = new JSONObject();
 
         try {
-            trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
-            JSONObject loResult = trans.LoadRecommendedOrder();
+            poStockROQ = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
+            JSONObject loResult = poStockROQ.LoadRecommendedOrder();
 
             if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
                 poJSON.put("result", "error");
@@ -1098,7 +1124,7 @@ public class StockRequest extends Transaction {
                 return poJSON;
             }
 
-            CachedRowSet loROQ = trans.getRecommendations();
+            CachedRowSet loROQ = poStockROQ.getRecommendations();
             loROQ.last();
             int totalROQ = loROQ.getRow();
             loROQ.beforeFirst();
