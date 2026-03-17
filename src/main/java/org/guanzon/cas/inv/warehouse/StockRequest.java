@@ -1,14 +1,16 @@
 package org.guanzon.cas.inv.warehouse;
 
-import com.google.protobuf.DoubleValue;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.sql.rowset.CachedRowSet;
+import org.guanzon.appdriver.agent.ActionAuthManager;
+import org.guanzon.appdriver.agent.MatrixAuthChecker;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -20,8 +22,9 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
-import org.guanzon.cas.inv.InvMaster;
+import org.guanzon.cas.inv.InvTransCons;
 import org.guanzon.cas.inv.Inventory;
+import org.guanzon.cas.inv.InventoryTransaction;
 import org.guanzon.cas.inv.services.InvControllers;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
@@ -33,39 +36,43 @@ import org.guanzon.cas.parameter.Brand;
 import org.guanzon.cas.parameter.Category;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
-public class StockRequest extends Transaction{  
+public class StockRequest extends Transaction {
+
     List<Model_Inv_Stock_Request_Master> paInvMaster;
     List<StockRequest> poStockRequest;
     static ROQ trans;
-    public JSONObject InitTransaction(){      
-        SOURCE_CODE = "InvR";
-        
+
+    public JSONObject InitTransaction() {
+        SOURCE_CODE = InvTransCons.INVENTORY_STOCK_REQUEST;
+
         poMaster = new InvWarehouseModels(poGRider).InventoryStockRequestMaster();
         poDetail = new InvWarehouseModels(poGRider).InventoryStockRequestDetail();
-        paDetail = new ArrayList<>();        
+        paDetail = new ArrayList<>();
         poStockRequest = new ArrayList<>();
-      
+
         return initialize();
     }
-    
-    public JSONObject NewTransaction() throws CloneNotSupportedException{        
+
+    public JSONObject NewTransaction() throws CloneNotSupportedException {
         return newTransaction();
     }
-    
-    public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException{
+
+    public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         return saveTransaction();
     }
-    
-    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException{        
+
+    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
         return openTransaction(transactionNo);
     }
-    
-    public JSONObject UpdateTransaction(){
+
+    public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
+
     public Model_Inv_Stock_Request_Master INVMaster(int row) {
         return (Model_Inv_Stock_Request_Master) paInvMaster.get(row);
     }
@@ -73,14 +80,65 @@ public class StockRequest extends Transaction{
     public int getINVMasterCount() {
         return this.paInvMaster.size();
     }
+
     private Model_Inv_Stock_Request_Master INVMasterList() {
         return new InvWarehouseModels(poGRider).InventoryStockRequestMaster();
     }
+
+    public JSONObject seekApproval()
+            throws SQLException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        //Moved only the script for seeking of approval - Arsiela 10-15-2025 - 14:11:01
+
+        //load authorization manager that evaluates current users authority for this process
+        ActionAuthManager loAuth = new ActionAuthManager(poGRider, "cas-purchasing");
+        poJSON = loAuth.isAuthorized();
+
+        //check if currenty user is authorized
+        if (!((String) poJSON.get("result")).equalsIgnoreCase("true")) {
+            //if not authorized, check the type type of authorization required 
+            if (((String) poJSON.get("code")).equalsIgnoreCase("regular")) {
+                //show process need regular authorization
+                ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
+                //get authorization from authoried personnel
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
+                //check if approving officer is authorized
+                String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                int lnUserLevl = Integer.parseInt(poJSON.get("nUserLevl").toString());
+                poJSON = loAuth.isAuthorized(lsUserIDxx, lnUserLevl);
+
+                //if approving is not authorized then do not continue process
+                if (!((String) poJSON.get("result")).equalsIgnoreCase("true")) {
+                    ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
+            } //needs authorization thru authorization matrix
+            else {
+                //show process needs authorization through the authority matrix
+                ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+
+    }
+
     private JSONObject saveUpdates(String status)
             throws CloneNotSupportedException {
         poJSON = new JSONObject();
         int lnCtr;
-        
+
         try {
             for (lnCtr = 0; lnCtr <= poStockRequest.size() - 1; lnCtr++) {
                 if (StockRequestStatus.CONFIRMED.equals(status)) {
@@ -112,35 +170,115 @@ public class StockRequest extends Transaction{
 
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-        
+
         String lsStatus = StockRequestStatus.CONFIRMED;
         boolean lbConfirm = true;
-      
-        if (getEditMode() != EditMode.READY){
-             poJSON.put("result", "error");
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
-            return poJSON;                
+            return poJSON;
         }
-        
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already confirmed.");
-            return poJSON;                
-        }
-        
-        //validator
-        poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
-        if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-             poJSON = ShowDialogFX.getUserApproval(poGRider);
-             if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
-                ShowMessageFX.Warning((String) poJSON.get("message"), null, null);
+// update into auth matrix maynard 2026-03-13       
+        //validator
+//        poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
+//        if (!"success".equals((String) poJSON.get("result"))) {
+//            return poJSON;
+//        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//             poJSON = ShowDialogFX.getUserApproval(poGRider);
+//             if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+//                ShowMessageFX.Warning((String) poJSON.get("message"), null, null);
+//                return poJSON;
+//             }
+//        }
+//========================================Authority Check Start===============================================
+        MatrixAuthChecker check = null;
+
+        if (!pbWthParent) {
+            //validator
+            poJSON = isEntryOkay(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
-             }
+            }
+
+            //get the matrix return from isEntryOkey
+            JSONArray loMatrix = (JSONArray) poJSON.get("matrix");
+
+            //Check if there is a authorization request
+            if (loMatrix != null) {
+                //initialized MatrixAuthChecker object
+                check = new MatrixAuthChecker(poGRider, SOURCE_CODE, Master().getTransactionNo());
+                //load the current autorization matrix request
+                poJSON = check.loadAuth();
+
+                //check if loading is okey
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
+                //check if authorization request is already approved by all authorizing personnel
+                if (!check.isAuthOkay()) {
+                    //check if authorization request allows system approval
+                    if (!check.isAllowSys()) {
+                        //extract the JSONObject from JSONArray
+                        JSONObject loJson = (JSONObject) loMatrix.get(0);
+
+                        //check if current user is authorized to approved this transaction
+                        poJSON = check.authTrans((String) loJson.get("sAuthType"), poGRider.getUserID());
+
+                        //If not authorized/request system approval
+                        if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                            poJSON = ShowDialogFX.getUserApproval(poGRider);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+
+                            //check if approving officer is authorized
+                            String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                            //check if current user is authorized to approved this transaction
+                            poJSON = check.authTrans((String) loJson.get("sAuthType"), poGRider.getUserID());
+                            //user is not authorized
+                            if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                    }
+
+                    //check if authorization request is already approved by all authorizing personnel
+                    if (!check.isAuthOkay()) {
+                        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+                        lsStatus = Character.toString((char) (64 + Integer.parseInt(lsStatus)));
+                        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            poGRider.rollbackTrans();
+                            return poJSON;
+                        }
+
+                        poGRider.commitTrans();
+
+                        poJSON.put("result", "matrix");
+                        return poJSON;
+                    }
+                }
+            } //there are no authorization event request
+            else {
+                //Replaced script above by calling of method Arsiela 10-15-2025 09:25:01
+                poJSON = seekApproval();
+                if ("error".equalsIgnoreCase((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
         }
+
+//========================================Authority Check End===============================================
         poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
 
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
@@ -153,44 +291,77 @@ public class StockRequest extends Transaction{
             poGRider.rollbackTrans();
             return poJSON;
         }
+
+        //maynard - 2026.03.13 14:41
+        //Update the inventory for this Received Purchase
+        InventoryTransaction loTrans = new InventoryTransaction(poGRider);
+
+        loTrans.StockRequest((String) poMaster.getValue("sTransNox"), (Date) poMaster.getValue("dTransact"), false);
+
+        String lsCondition = "0";
+        for (Model loDetail : paDetail) {
+            Model_Inv_Stock_Request_Detail detail = (Model_Inv_Stock_Request_Detail) loDetail;
+
+            loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(), lsCondition, detail.getQuantity(), detail.getQuantity(), detail.Inventory().getSellingPrice().doubleValue());
+
+        }
+
+        loTrans.saveTransaction();
+
+        //Update status for this transaction
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        if (check != null) {
+            check.postAuth();
+        }
+
         poGRider.commitTrans();
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        
+
         if (lbConfirm) {
-        poJSON.put("message", "Transaction confirmed successfully.");
+            poJSON.put("message", "Transaction confirmed successfully.");
+        } else {
+            poJSON.put("message", "Transaction confirmation request submitted successfully.");
         }
-        else {poJSON.put("message", "Transaction confirmation request submitted successfully.");}
-        
+
         return poJSON;
     }
-    
+
     public JSONObject PostTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-        
+
         String lsStatus = StockRequestStatus.PROCESSED;
         boolean lbConfirm = true;
-        
-        if (getEditMode() != EditMode.READY){
+
+        if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
-            return poJSON;                
+            return poJSON;
         }
-        
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already processed.");
-            return poJSON;                
+            return poJSON;
         }
-        
+
         //validator
         poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
         //change status
-        poJSON =  statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks,  lsStatus, !lbConfirm);
-        
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
         poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
 
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
@@ -208,35 +379,40 @@ public class StockRequest extends Transaction{
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        
-        if (lbConfirm) poJSON.put("message", "Transaction posted successfully.");
-        else poJSON.put("message", "Transaction posting request submitted successfully.");
-        
+
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction posted successfully.");
+        } else {
+            poJSON.put("message", "Transaction posting request submitted successfully.");
+        }
+
         return poJSON;
     }
-    
+
     public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-        
+
         String lsStatus = StockRequestStatus.CANCELLED;
         boolean lbConfirm = true;
-        
-        if (getEditMode() != EditMode.READY){
+
+        if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
-            return poJSON;                
+            return poJSON;
         }
-        
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already cancelled.");
-            return poJSON;                
+            return poJSON;
         }
-        
+
         //validator
         poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
         //change status
         poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
 
@@ -255,35 +431,40 @@ public class StockRequest extends Transaction{
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        
-        if (lbConfirm) poJSON.put("message", "Transaction cancelled successfully.");
-        else poJSON.put("message", "Transaction cancellation request submitted successfully.");
-        
+
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction cancelled successfully.");
+        } else {
+            poJSON.put("message", "Transaction cancellation request submitted successfully.");
+        }
+
         return poJSON;
     }
-    
+
     public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-        
+
         String lsStatus = StockRequestStatus.VOID;
         boolean lbConfirm = true;
-        
-        if (getEditMode() != EditMode.READY){
+
+        if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
-            return poJSON;                
+            return poJSON;
         }
-        
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))){    
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already voided.");
-            return poJSON;                
+            return poJSON;
         }
-        
+
         //validator
         poJSON = isEntryOkay(StockRequestStatus.CONFIRMED);
-        if (!"success".equals((String) poJSON.get("result"))) return poJSON;
-        
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
         //change status
         poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, Master().getTransactionNo());
 
@@ -302,285 +483,280 @@ public class StockRequest extends Transaction{
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        
-        if (lbConfirm) poJSON.put("message", "Transaction voided successfully.");
-        else poJSON.put("message", "Transaction voiding request submitted successfully.");
-        
+
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction voided successfully.");
+        } else {
+            poJSON.put("message", "Transaction voiding request submitted successfully.");
+        }
+
         return poJSON;
     }
-    
-    public JSONObject AddDetail() throws CloneNotSupportedException{
+
+    public JSONObject AddDetail() throws CloneNotSupportedException {
         if (Detail(getDetailCount() - 1).getStockId().isEmpty()) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "Last row has empty item.");
             return poJSON;
         }
-        
+
         return addDetail();
     }
-    
+
     /*Search Master References*/
-    public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
+    public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus("1");
-        
+
         poJSON = object.searchRecord(value, byCode);
-        
-        if ("success".equals((String) poJSON.get("result"))){
+
+        if ("success".equals((String) poJSON.get("result"))) {
             Master().setBranchCode(object.getModel().getBranchCode());
-        }    
-        
+        }
+
         return poJSON;
     }
-    
-    public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
+
+    public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
         object.setRecordStatus("1");
 
         poJSON = object.searchRecord(value, byCode);
 
-        if ("success".equals((String) poJSON.get("result"))){
+        if ("success".equals((String) poJSON.get("result"))) {
             Master().setIndustryId(object.getModel().getIndustryId());
-        }    
-        
+        }
+
         return poJSON;
     }
-    
-    public JSONObject SearchCategory(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
+
+    public JSONObject SearchCategory(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Category object = new ParamControllers(poGRider, logwrapr).Category();
         object.setRecordStatus("1");
-        
+
         poJSON = object.searchRecord(value, byCode);
-       
-       
-       
-        if ("success".equals((String) poJSON.get("result"))){
+
+        if ("success".equals((String) poJSON.get("result"))) {
             Master().setCategoryId(object.getModel().getCategoryId());
-         
-        }    
-        
+
+        }
+
         return poJSON;
     }
+
     public JSONObject SearchBrand(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Brand brand = new ParamControllers(poGRider, logwrapr).Brand();
         brand.getModel().setRecordStatus(RecordStatus.ACTIVE);
-              
-      
+
         poJSON = brand.searchRecord(value, byCode, Master().getIndustryId());
-        
+
         if ("success".equals((String) poJSON.get("result"))) {
-          poJSON.put("brandDesc", brand.getModel().getDescription());
-          poJSON.put("brandID", brand.getModel().getBrandId());
+            poJSON.put("brandDesc", brand.getModel().getDescription());
+            poJSON.put("brandID", brand.getModel().getBrandId());
         }
 
         return poJSON;
     }
+
     /*End - Search Master References*/
-    
-    
-     /*Search Detail References*/
-   public JSONObject SearchModel(String value, boolean byCode, String brandId, int row) throws SQLException, GuanzonException, NullPointerException {
- 
-    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
-    object.getModel().setRecordStatus(RecordStatus.ACTIVE);
 
-        
-          poJSON = object.searchRecord(value, byCode, null, brandId, Master().getIndustryId(),Master().getCategoryId());
-        
-    if ("success".equals((String) poJSON.get("result"))) {
-        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-            if (lnRow != row) {
-                if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
-                        && (Detail(lnRow).getStockId().equals(object.getModel().getStockId()))) {
-                    
-                    
-                    double existingQty = Detail(lnRow).getQuantity();
-                    double newQty = existingQty + 1;
-                    Detail(lnRow).setQuantity(newQty);
-                    
-                   
-                    Detail(row).setStockId("");  
-                    poJSON.put("result", "merged");
-                    poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
-                    return poJSON;
+ /*Search Detail References*/
+    public JSONObject SearchModel(String value, boolean byCode, String brandId, int row) throws SQLException, GuanzonException, NullPointerException {
+
+        Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
+        object.getModel().setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode, null, brandId, Master().getIndustryId(), Master().getCategoryId());
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (lnRow != row) {
+                    if ((Master().getSourceNo().equals("") || Master().getSourceNo() == null)
+                            && (Detail(lnRow).getStockId().equals(object.getModel().getStockId()))) {
+
+                        double existingQty = Detail(lnRow).getQuantity();
+                        double newQty = existingQty + 1;
+                        Detail(lnRow).setQuantity(newQty);
+
+                        Detail(row).setStockId("");
+                        poJSON.put("result", "merged");
+                        poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
+                        return poJSON;
+                    }
                 }
             }
+
+            Detail(row).setStockId(object.getModel().getStockId());
+
         }
-        
-       Detail(row).setStockId(object.getModel().getStockId());
-        
-     
+
+        return poJSON;
     }
 
-    return poJSON;
-}
+    public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandId)
+            throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
 
- public JSONObject SearchBarcode(String value, boolean byCode, int row, String brandId)
-        throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException, NullPointerException {
+        Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
-    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
-    object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode, null, brandId,
+                Master().getIndustryId(), Master().getCategoryId());
 
-    poJSON = object.searchRecord(value, byCode, null, brandId,
-            Master().getIndustryId(), Master().getCategoryId());
+        if ("success".equals((String) poJSON.get("result"))) {
+            String stockId = object.getModel().getStockId();
 
-    if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.getModel().getStockId();
+            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (lnRow != row) {
+                    if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                            && stockId.equals(Detail(lnRow).getStockId())) {
 
-        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-            if (lnRow != row) {
-                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
-                        && stockId.equals(Detail(lnRow).getStockId())) {
+                        double existingQty = Detail(lnRow).getQuantity();
+                        double newQty = existingQty + 1;
+                        Detail(lnRow).setQuantity(newQty);
 
-                    double existingQty = Detail(lnRow).getQuantity();
-                    double newQty = existingQty + 1;
-                    Detail(lnRow).setQuantity(newQty);
+                        Detail(row).setStockId("");
 
-                    Detail(row).setStockId("");  
-
-                    poJSON.put("result", "merged");
-                    poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
-                    return poJSON;
+                        poJSON.put("result", "merged");
+                        poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
+                        return poJSON;
+                    }
                 }
             }
+
+            Detail(row).setStockId(stockId);
+
+            poJSON.put("result", "success");
+            poJSON.put("message", "Barcode added successfully.");
         }
 
-        Detail(row).setStockId(stockId);
-
-        poJSON.put("result", "success");
-        poJSON.put("message", "Barcode added successfully.");
+        return poJSON;
     }
 
-    return poJSON;
-}
+    public JSONObject SearchBarcodeGeneral(String value, boolean byCode, int row, String brandId)
+            throws ExceptionInInitializerError, SQLException, GuanzonException,
+            CloneNotSupportedException, NullPointerException {
 
+        Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
- public JSONObject SearchBarcodeGeneral(String value, boolean byCode, int row, String brandId)
-        throws ExceptionInInitializerError, SQLException, GuanzonException,
-               CloneNotSupportedException, NullPointerException {
+        poJSON = object.searchRecord(value, byCode, null, brandId, null, Master().getCategoryId());
 
-    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
-    object.setRecordStatus(RecordStatus.ACTIVE);
+        if ("success".equals((String) poJSON.get("result"))) {
+            String stockId = object.getModel().getStockId();
 
-    poJSON = object.searchRecord(value, byCode, null, brandId, null, Master().getCategoryId());
+            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (lnRow != row) {
+                    if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                            && stockId.equals(Detail(lnRow).getStockId())) {
 
-    if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.getModel().getStockId();
+                        double existingQty = Detail(lnRow).getQuantity();
+                        double newQty = existingQty + 1;
+                        Detail(lnRow).setQuantity(newQty);
 
-        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-            if (lnRow != row) {
-                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
-                        && stockId.equals(Detail(lnRow).getStockId())) {
-
-                    double existingQty = Detail(lnRow).getQuantity();
-                    double newQty = existingQty + 1;
-                    Detail(lnRow).setQuantity(newQty);
-
-                    Detail(row).setStockId("");  
-                    poJSON.put("result", "merged");
-                    poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
-                    poJSON.put("updatedRow", lnRow);
-                    return poJSON; 
+                        Detail(row).setStockId("");
+                        poJSON.put("result", "merged");
+                        poJSON.put("message", "Barcode already exists at row " + (lnRow + 1) + ", quantity updated.");
+                        poJSON.put("updatedRow", lnRow);
+                        return poJSON;
+                    }
                 }
             }
+
+            Detail(row).setStockId(stockId);
+            Detail(row).setCategoryCode(object.getModel().getCategoryFirstLevelId());
+
+            poJSON.put("result", "success");
+            poJSON.put("message", "Barcode added successfully.");
         }
 
-        Detail(row).setStockId(stockId);
-        Detail(row).setCategoryCode(object.getModel().getCategoryFirstLevelId());
-        
-
-        poJSON.put("result", "success");
-        poJSON.put("message", "Barcode added successfully.");
+        return poJSON;
     }
 
-    return poJSON;
-}
+    public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row, String brandId)
+            throws ExceptionInInitializerError, SQLException, GuanzonException,
+            CloneNotSupportedException, NullPointerException {
 
-  public JSONObject SearchBarcodeDescription(String value, boolean byCode, int row, String brandId)
-        throws ExceptionInInitializerError, SQLException, GuanzonException,
-               CloneNotSupportedException, NullPointerException {
+        Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
-    Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
-    object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode, null, brandId,
+                Master().getIndustryId(), Master().getCategoryId());
 
-    poJSON = object.searchRecord(value, byCode, null, brandId,
-            Master().getIndustryId(), Master().getCategoryId());
+        if ("success".equals((String) poJSON.get("result"))) {
+            String stockId = object.getModel().getStockId();
 
-    if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.getModel().getStockId();
+            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (lnRow != row) {
+                    if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                            && stockId.equals(Detail(lnRow).getStockId())) {
 
-        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-            if (lnRow != row) {
-                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
-                        && stockId.equals(Detail(lnRow).getStockId())) {
+                        double existingQty = Detail(lnRow).getQuantity();
+                        double newQty = existingQty + 1;
+                        Detail(lnRow).setQuantity(newQty);
 
-                    double existingQty = Detail(lnRow).getQuantity();
-                    double newQty = existingQty + 1;
-                    Detail(lnRow).setQuantity(newQty);
-
-                    Detail(row).setStockId(""); 
-                    poJSON.put("result", "merged");
-                    poJSON.put("message", "Description already exists at row " + (lnRow + 1) + ", quantity updated.");
-                    poJSON.put("updatedRow", lnRow); 
-                    return poJSON;
+                        Detail(row).setStockId("");
+                        poJSON.put("result", "merged");
+                        poJSON.put("message", "Description already exists at row " + (lnRow + 1) + ", quantity updated.");
+                        poJSON.put("updatedRow", lnRow);
+                        return poJSON;
+                    }
                 }
             }
+
+            Detail(row).setStockId(stockId);
+
+            poJSON.put("result", "success");
+            poJSON.put("message", "Description added successfully.");
         }
 
-        Detail(row).setStockId(stockId);
-
-        poJSON.put("result", "success");
-        poJSON.put("message", "Description added successfully.");
+        return poJSON;
     }
 
-    return poJSON;
-}
-
-public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, int row, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
+    public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, int row, String brandId) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException,
             NullPointerException {
         Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
-    object.setRecordStatus(RecordStatus.ACTIVE);
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
-    poJSON = object.searchRecord(value, byCode, null, brandId,
-            null, Master().getCategoryId());
+        poJSON = object.searchRecord(value, byCode, null, brandId,
+                null, Master().getCategoryId());
 
-    if ("success".equals((String) poJSON.get("result"))) {
-        String stockId = object.getModel().getStockId();
+        if ("success".equals((String) poJSON.get("result"))) {
+            String stockId = object.getModel().getStockId();
 
-        for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-            if (lnRow != row) {
-                if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
-                        && stockId.equals(Detail(lnRow).getStockId())) {
+            for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (lnRow != row) {
+                    if ((Master().getSourceNo() == null || Master().getSourceNo().isEmpty())
+                            && stockId.equals(Detail(lnRow).getStockId())) {
 
-                    double existingQty = Detail(lnRow).getQuantity();
-                    double newQty = existingQty + 1;
-                    Detail(lnRow).setQuantity(newQty);
+                        double existingQty = Detail(lnRow).getQuantity();
+                        double newQty = existingQty + 1;
+                        Detail(lnRow).setQuantity(newQty);
 
-                    Detail(row).setStockId(""); 
-                    poJSON.put("result", "merged");
-                    poJSON.put("message", "Description already exists at row " + (lnRow + 1) + ", quantity updated.");
-                    poJSON.put("updatedRow", lnRow); 
-                    return poJSON;
+                        Detail(row).setStockId("");
+                        poJSON.put("result", "merged");
+                        poJSON.put("message", "Description already exists at row " + (lnRow + 1) + ", quantity updated.");
+                        poJSON.put("updatedRow", lnRow);
+                        return poJSON;
+                    }
                 }
             }
+
+            Detail(row).setStockId(stockId);
+
+            poJSON.put("result", "success");
+            poJSON.put("message", "Description added successfully.");
         }
 
-        Detail(row).setStockId(stockId);
-
-        poJSON.put("result", "success");
-        poJSON.put("message", "Description added successfully.");
+        return poJSON;
     }
 
-    return poJSON;
-    }
     /*End - Search Detail References*/
-       
     @Override
-    public String getSourceCode(){
+    public String getSourceCode() {
         return SOURCE_CODE;
-    }    
-    
+    }
+
     @Override
     public Model_Inv_Stock_Request_Master Master() {
         return (Model_Inv_Stock_Request_Master) poMaster;
@@ -589,31 +765,31 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
     @Override
     public Model_Inv_Stock_Request_Detail Detail(int row) {
         return (Model_Inv_Stock_Request_Detail) paDetail.get(row);
-    }    
-        
+    }
+
     @Override
-    public JSONObject willSave() throws SQLException, GuanzonException{
+    public JSONObject willSave() throws SQLException, GuanzonException {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
-        
+
         //remove items with no stockid or quantity order       
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
             if ("".equals((String) item.getValue("sStockIDx"))
-                || ((Number) item.getValue("nQuantity")).doubleValue() <= 0) {
-                 detail.remove(); // Correctly remove the item
+                    || ((Number) item.getValue("nQuantity")).doubleValue() <= 0) {
+                detail.remove(); // Correctly remove the item
             }
         }
 
         //assign other info on detail
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr ++){            
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNumber(lnCtr + 1);
         }
-        
-        if (getDetailCount() == 1){
+
+        if (getDetailCount() == 1) {
             //do not allow a single item detail with no quantity order
             if (Detail(0).getQuantity() == 0) {
                 poJSON.put("result", "error");
@@ -621,41 +797,41 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
                 return poJSON;
             }
         }
-        
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
     @Override
     public JSONObject save() {
         /*Put saving business rules here*/
         return isEntryOkay(StockRequestStatus.OPEN);
     }
-    
+
     @Override
     public JSONObject saveOthers() {
         /*Only modify this if there are other tables to modify except the master and detail tables*/
         poJSON = new JSONObject();
-        
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
     @Override
     public void saveComplete() {
         /*This procedure was called when saving was complete*/
         System.out.println("Transaction saved successfully.");
     }
-    
+
     @Override
     public JSONObject initFields() {
         /*Put initial model values here*/
         poJSON = new JSONObject();
-        
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
     @SuppressWarnings("unchecked")
     public List<Model_Inv_Stock_Request_Detail> getDetailList() {
         System.out.print("GET DETAIL LIST");
@@ -667,10 +843,10 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
     }
 
     @Override
-    protected JSONObject isEntryOkay(String status){
+    protected JSONObject isEntryOkay(String status) {
         System.out.println("IS ENTRY OK?");
         GValidator loValidator = StockRequestValidatorFactory.make(Master().getIndustryId());
-        
+
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
         loValidator.setMaster(poMaster);
@@ -678,7 +854,7 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         loValidator.setDetail(laDetailList);
 
         poJSON = loValidator.validate();
-        
+
         if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
@@ -693,11 +869,11 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
                 }
             }
         }
-        
+
         return poJSON;
     }
 
-  public JSONObject isDetailHasZeroQty() {
+    public JSONObject isDetailHasZeroQty() {
         poJSON = new JSONObject();
         int zeroQtyRow = -1;
         boolean hasNonZeroQty = false;
@@ -739,110 +915,55 @@ public JSONObject SearchBarcodeDescriptionGeneral(String value, boolean byCode, 
         return poJSON;
     }
 
-    
-    
-                  
-        @Override
-public void initSQL() {
-    SQL_BROWSE = "SELECT " +
-                 "  a.sTransNox, " +
-                 "  a.dTransact, " +
-                 "  a.sIndstCdx, " +     
-                 "  a.sReferNox " +       
-                 "FROM Inv_Stock_Request_Master a";
-}
+    @Override
+    public void initSQL() {
+        SQL_BROWSE = "SELECT "
+                + "  a.sTransNox, "
+                + "  a.dTransact, "
+                + "  a.sIndstCdx, "
+                + "  a.sReferNox "
+                + "FROM Inv_Stock_Request_Master a";
+    }
 
-
-        public JSONObject searchTransaction(boolean searchRef) throws CloneNotSupportedException, SQLException, GuanzonException {
-            poJSON = new JSONObject();
-            String lsTransStat = "";
-
-            if (psTranStat != null) {
-                if (psTranStat.length() > 1) {
-                    for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
-                        lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
-                    }
-                    lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
-                } else {
-                    lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
-                }
-            }
-
-            initSQL();
-            String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
-                    " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
-                  + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
-                  + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
-                  + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
-
-          
-            if (searchRef) {
-                lsSQL = MiscUtil.addCondition(lsSQL, "a.sReferNox IS NOT NULL AND a.sReferNox <> ''");
-            }
-
-            if (psTranStat != null && !"".equals(psTranStat)) {
-                lsSQL = lsSQL + lsTransStat;
-            }
-
-            System.out.println("Executing SQL: " + lsSQL);
-
-            poJSON = ShowDialogFX.Browse(poGRider,
-                    lsSQL,
-                    "",
-                    "Transaction Date»Transaction No»Reference No",
-                    "dTransact»sTransNox»sReferNox",
-                    "a.dTransact»a.sTransNox»a.sReferNox",
-                    1);
-
-            if (poJSON != null) {
-                return OpenTransaction((String) poJSON.get("sTransNox"));
-            } else {
-                poJSON = new JSONObject();
-                poJSON.put("result", "error");
-                poJSON.put("message", "No record loaded.");
-                return poJSON;
-            }
-        }
-
-       public JSONObject searchTransaction()throws CloneNotSupportedException,SQLException,GuanzonException {
-          
+    public JSONObject searchTransaction(boolean searchRef) throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsTransStat = "";
-       
+
         if (psTranStat != null) {
             if (psTranStat.length() > 1) {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                     lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
                 }
-               
                 lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
             } else {
                 lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
             }
         }
-           
-          
+
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
-               + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
-               + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
-               +" AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
-//                + " AND a.sSupplier LIKE " + SQLUtil.toSQL("%" + Master().getSupplierId()));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
+                + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
+                + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+
+        if (searchRef) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sReferNox IS NOT NULL AND a.sReferNox <> ''");
+        }
+
         if (psTranStat != null && !"".equals(psTranStat)) {
             lsSQL = lsSQL + lsTransStat;
         }
 
         System.out.println("Executing SQL: " + lsSQL);
-       
-               poJSON = ShowDialogFX.Browse(poGRider,
+
+        poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction Date»Transaction No»Reference No",   
-                "dTransact»sTransNox»sReferNox",                  
-                "a.dTransact»a.sTransNox»a.sReferNox",            
+                "Transaction Date»Transaction No»Reference No",
+                "dTransact»sTransNox»sReferNox",
+                "a.dTransact»a.sTransNox»a.sReferNox",
                 1);
-
-
 
         if (poJSON != null) {
             return OpenTransaction((String) poJSON.get("sTransNox"));
@@ -853,7 +974,55 @@ public void initSQL() {
             return poJSON;
         }
     }
-       public JSONObject getTableListInformation(String fsTransNo, String fsReferID) throws SQLException, GuanzonException {
+
+    public JSONObject searchTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
+
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+
+        if (psTranStat != null) {
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                    lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+                }
+
+                lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+            } else {
+                lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+            }
+        }
+
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(ps)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
+                + " AND a.sCategrCd = " + SQLUtil.toSQL(Master().getCategoryId())
+                + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+//                + " AND a.sSupplier LIKE " + SQLUtil.toSQL("%" + Master().getSupplierId()));
+        if (psTranStat != null && !"".equals(psTranStat)) {
+            lsSQL = lsSQL + lsTransStat;
+        }
+
+        System.out.println("Executing SQL: " + lsSQL);
+
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "",
+                "Transaction Date»Transaction No»Reference No",
+                "dTransact»sTransNox»sReferNox",
+                "a.dTransact»a.sTransNox»a.sReferNox",
+                1);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+
+    public JSONObject getTableListInformation(String fsTransNo, String fsReferID) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
         String lsTransStat = "";
         if (psTranStat.length() > 1) {
@@ -865,12 +1034,12 @@ public void initSQL() {
             lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
         }
 
-        String lsSQL = "SELECT " +
-                 "  a.sTransNox, " +
-                 "  a.dTransact, " +
-                 "  a.sIndstCdx, " +     
-                 "  a.sReferNox " +       
-                 "FROM Inv_Stock_Request_Master a";
+        String lsSQL = "SELECT "
+                + "  a.sTransNox, "
+                + "  a.dTransact, "
+                + "  a.sIndstCdx, "
+                + "  a.sReferNox "
+                + "FROM Inv_Stock_Request_Master a";
         String lsFilterCondition = String.join(" AND ",
                 " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId()),
                 " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
@@ -916,51 +1085,48 @@ public void initSQL() {
         return loJSON;
     }
 
+    public JSONObject getROQItems() {
+        poJSON = new JSONObject();
 
-      public JSONObject getROQItems() {
-         poJSON = new JSONObject();
+        try {
+            trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
+            JSONObject loResult = trans.LoadRecommendedOrder();
 
-    try {
-        trans = new ROQ(poGRider, poGRider.getBranchCode(), Master().getCategoryId());
-        JSONObject loResult = trans.LoadRecommendedOrder();
-
-                if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Unable to load ROQ: " + loResult.get("message"));
-                    return poJSON;
-                }
-
-                CachedRowSet loROQ = trans.getRecommendations();
-                loROQ.last();
-                int totalROQ = loROQ.getRow();
-                loROQ.beforeFirst();
-                int index = 0;
-                while (loROQ.next()) {
-                    String lsStockID = loROQ.getString("sStockIDx");
-                    double lnROQ = loROQ.getDouble("nRecOrder");
-
-                    int row = getDetailCount() - 1;
-                    Detail(row).setStockId(lsStockID);
-                    Detail(row).setRecommendedOrder(lnROQ);
-
-                    index++;
-                    if (index < totalROQ) {
-                        AddDetail(); 
-                    }
-                }
-                System.out.println(totalROQ + "total roq");
-                poJSON.put("result", "success");
-                poJSON.put("message", "ROQ items added successfully.");
-                
-                return poJSON;
-
-            } catch (Exception e) {
+            if (!"success".equalsIgnoreCase((String) loResult.get("result"))) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Exception occurred: " + MiscUtil.getException(e));
+                poJSON.put("message", "Unable to load ROQ: " + loResult.get("message"));
                 return poJSON;
             }
+
+            CachedRowSet loROQ = trans.getRecommendations();
+            loROQ.last();
+            int totalROQ = loROQ.getRow();
+            loROQ.beforeFirst();
+            int index = 0;
+            while (loROQ.next()) {
+                String lsStockID = loROQ.getString("sStockIDx");
+                double lnROQ = loROQ.getDouble("nRecOrder");
+
+                int row = getDetailCount() - 1;
+                Detail(row).setStockId(lsStockID);
+                Detail(row).setRecommendedOrder(lnROQ);
+
+                index++;
+                if (index < totalROQ) {
+                    AddDetail();
+                }
+            }
+            System.out.println(totalROQ + "total roq");
+            poJSON.put("result", "success");
+            poJSON.put("message", "ROQ items added successfully.");
+
+            return poJSON;
+
+        } catch (Exception e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Exception occurred: " + MiscUtil.getException(e));
+            return poJSON;
         }
+    }
 
-
-
-}  
+}
