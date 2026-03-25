@@ -11,14 +11,15 @@ import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.json.simple.JSONObject;
 import java.util.Date;
-public class StockRequest_MC implements GValidator{
+
+public class StockRequest_MC implements GValidator {
+
     GRiderCAS poGrider;
     String psTranStat;
     JSONObject poJSON;
-    
+
     Model_Inv_Stock_Request_Master poMaster;
     ArrayList<Model_Inv_Stock_Request_Detail> poDetail;
- 
 
     @Override
     public void setApplicationDriver(Object applicationDriver) {
@@ -34,7 +35,7 @@ public class StockRequest_MC implements GValidator{
     public void setMaster(Object value) {
         poMaster = (Model_Inv_Stock_Request_Master) value;
     }
-    
+
     @SuppressWarnings("unchecked")
     @Override
     public void setDetail(ArrayList<Object> value) {
@@ -49,30 +50,28 @@ public class StockRequest_MC implements GValidator{
     @Override
     public JSONObject validate() {
         try {
-        switch (psTranStat){
-            case StockRequestStatus.OPEN:
-                return validateNew();
-            case StockRequestStatus.CONFIRMED:
-            {
+            switch (psTranStat) {
+                case StockRequestStatus.OPEN:
+                    return validateNew();
+                case StockRequestStatus.CONFIRMED:
                     return validateConfirmed();
+                case StockRequestStatus.PROCESSED:
+                    return validateProcessed();
+                case StockRequestStatus.CANCELLED:
+                    return validateCancelled();
+                case StockRequestStatus.VOID:
+                    return validateVoid();
+                default:
+                    poJSON = new JSONObject();
+                    poJSON.put("result", "success");
             }
-
-            case StockRequestStatus.PROCESSED:
-                return validateProcessed();
-            case StockRequestStatus.CANCELLED:
-                return validateCancelled();
-            case StockRequestStatus.VOID:
-                return validateVoid();
-            default:
-                poJSON = new JSONObject();
-                poJSON.put("result", "success");
-        } } catch (SQLException ex) {
+        } catch (SQLException ex) {
             Logger.getLogger(StockRequest_MC.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
         return poJSON;
     }
-    
+
     private JSONObject validateNew() throws SQLException {
         poJSON = new JSONObject();
         boolean isRequiredApproval = false;
@@ -90,8 +89,6 @@ public class StockRequest_MC implements GValidator{
             isRequiredApproval = true;
         }
 
-        
-
         if (poMaster.getBranchCode() == null || poMaster.getBranchCode().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Branch is not set.");
@@ -100,7 +97,7 @@ public class StockRequest_MC implements GValidator{
 
         int lnDetailCount = 0;
         for (int lnCtr = 0; lnCtr < poDetail.size(); lnCtr++) {
-            if (poDetail.get(lnCtr).getStockId()!= null
+            if (poDetail.get(lnCtr).getStockId() != null
                     && !poDetail.get(lnCtr).getStockId().isEmpty()) {
                 lnDetailCount++;
             }
@@ -118,7 +115,6 @@ public class StockRequest_MC implements GValidator{
         return poJSON;
     }
 
-    
     private JSONObject validateConfirmed() throws SQLException {
         poJSON = new JSONObject();
         boolean isRequiredApproval = false;
@@ -159,24 +155,24 @@ public class StockRequest_MC implements GValidator{
 
         return poJSON;
     }
-    
-    private JSONObject validateProcessed(){
+
+    private JSONObject validateProcessed() {
         poJSON = new JSONObject();
-                
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-    private JSONObject validateCancelled(){
+
+    private JSONObject validateCancelled() {
         poJSON = new JSONObject();
-                
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-    private JSONObject validateVoid(){
+
+    private JSONObject validateVoid() {
         poJSON = new JSONObject();
-                
+
         poJSON.put("result", "success");
         return poJSON;
     }

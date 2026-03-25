@@ -8,7 +8,6 @@
     import org.guanzon.appdriver.base.MiscUtil;
     import org.guanzon.appdriver.base.SQLUtil;
     import org.guanzon.appdriver.constant.EditMode;
-    import org.guanzon.appdriver.constant.Logical;
     import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
     import org.guanzon.cas.parameter.model.Model_Branch;
     import org.guanzon.cas.parameter.model.Model_Category;

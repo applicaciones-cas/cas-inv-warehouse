@@ -5,22 +5,18 @@ import org.guanzon.appdriver.iface.GValidator;
 public class StockRequestValidatorFactory {
     public static GValidator make(String industryId){
         switch (industryId) {
-            case "01": //Mobile Phone
+            case "00": //Mobile Phone
                 return new StockRequest_MP();
-            case "02": //Motorcycle
+            case "01": //Motorcycle
                 return new StockRequest_MC();
-            case "03": //Vehicle
+            case "02": //Vehicle
                 return new StockRequest_Vehicle();
-            case "04": //Hospitality
+            case "03": //Hospitality
                 return new StockRequest_Hospitality();
-            case "05": //Los Pedritos
+            case "04": //Los Pedritos
                 return new StockRequest_LP();
-            case "": //General
-                return new StockRequest_General();
-            case "07":
-                return new StockRequest_Appliances();
             default:
-                return null;
+                return new StockRequest_General();
         }
     }
 }

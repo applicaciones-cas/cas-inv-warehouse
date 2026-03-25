@@ -77,7 +77,7 @@ public class ROQ {
                         " ORDER BY a.cClassify, d.sDescript";
         
         ResultSet loRS = poGRider.executeQuery(lsSQL);
-        
+        System.out.println("ROQ Item's :" + lsSQL);
         if (MiscUtil.RecordCount(loRS) > 0) initRecOrder(loRS);
         
         poJSON.put("result", "success");

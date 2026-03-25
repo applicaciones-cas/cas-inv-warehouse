@@ -29,6 +29,7 @@ import org.guanzon.cas.inv.services.InvControllers;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseModels;
+import org.guanzon.cas.inv.warehouse.status.InventoryStockIssuanceStatus;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.guanzon.cas.inv.warehouse.validators.StockRequestValidatorFactory;
 import org.guanzon.cas.parameter.Branch;
@@ -327,9 +328,17 @@ public class StockRequest extends Transaction {
         String lsCondition = "0";
         for (Model loDetail : paDetail) {
             Model_Inv_Stock_Request_Detail detail = (Model_Inv_Stock_Request_Detail) loDetail;
+            try {
+                loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(), lsCondition, detail.getQuantity(), detail.getQuantity(), detail.Inventory().getSellingPrice().doubleValue());
+            } catch (GuanzonException ex) {
+                poJSON = new JSONObject();
 
-            loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(), lsCondition, detail.getQuantity(), detail.getQuantity(), detail.Inventory().getSellingPrice().doubleValue());
+                poGRider.rollbackTrans();
+                poJSON.put("result", "error");
+                poJSON.put("message", ex.getMessage());
+                return poJSON;
 
+            }
         }
 
         loTrans.saveTransaction();
@@ -575,7 +584,7 @@ public class StockRequest extends Transaction {
         Brand brand = new ParamControllers(poGRider, logwrapr).Brand();
         brand.getModel().setRecordStatus(RecordStatus.ACTIVE);
 
-        poJSON = brand.searchRecord(value, byCode, Master().getIndustryId());
+        poJSON = brand.searchRecord(value, byCode, psIndustryCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
             poJSON.put("brandDesc", brand.getModel().getDescription());
@@ -593,7 +602,7 @@ public class StockRequest extends Transaction {
         Inventory object = new InvControllers(poGRider, logwrapr).Inventory();
         object.getModel().setRecordStatus(RecordStatus.ACTIVE);
 
-        poJSON = object.searchRecord(value, byCode, null, brandId, Master().getIndustryId(), Master().getCategoryId());
+        poJSON = object.searchRecord(value, byCode, null, brandId, psIndustryCode, psCategorCD);
 
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
@@ -627,7 +636,7 @@ public class StockRequest extends Transaction {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode, null, brandId,
-                Master().getIndustryId(), Master().getCategoryId());
+                psIndustryCode, psCategorCD);
 
         if ("success".equals((String) poJSON.get("result"))) {
             String stockId = object.getModel().getStockId();
@@ -707,7 +716,7 @@ public class StockRequest extends Transaction {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode, null, brandId,
-                Master().getIndustryId(), Master().getCategoryId());
+                psIndustryCode, psCategorCD);
 
         if ("success".equals((String) poJSON.get("result"))) {
             String stockId = object.getModel().getStockId();
@@ -798,6 +807,11 @@ public class StockRequest extends Transaction {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
 
+        poJSON = isEntryOkay(InventoryStockIssuanceStatus.OPEN);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
         //remove items with no stockid or quantity order       
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
@@ -826,12 +840,6 @@ public class StockRequest extends Transaction {
 
         poJSON.put("result", "success");
         return poJSON;
-    }
-
-    @Override
-    public JSONObject save() {
-        /*Put saving business rules here*/
-        return isEntryOkay(StockRequestStatus.OPEN);
     }
 
     @Override
@@ -871,7 +879,7 @@ public class StockRequest extends Transaction {
     @Override
     protected JSONObject isEntryOkay(String status) {
         System.out.println("IS ENTRY OK?");
-        GValidator loValidator = StockRequestValidatorFactory.make(Master().getIndustryId());
+        GValidator loValidator = StockRequestValidatorFactory.make(psIndustryCode);
 
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
