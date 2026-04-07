@@ -1,6 +1,7 @@
-package ph.com.guanzongroup.cas.inv.warehouse.t4.model.services;
+package org.guanzon.cas.inv.warehouse.services;
 
 import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.LogWrapper;
 import org.guanzon.cas.inv.warehouse.model.Model_Cluster_Delivery_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Cluster_Delivery_Master;
 import org.guanzon.cas.inv.warehouse.model.Model_Delivery_Schedule_Detail;
@@ -21,6 +22,7 @@ public class DeliveryIssuanceModels {
 
     private final GRiderCAS poGRider;
 
+    private LogWrapper poLogWrapper;
     //Useable Model List
     private Model_Delivery_Schedule_Master poDeliverySchedule;
     private Model_Delivery_Schedule_Detail poDeliveryScheduleDetail;
@@ -29,6 +31,14 @@ public class DeliveryIssuanceModels {
     private Model_Inventory_Transfer_Detail_Expiration poInventoryTransferDetailExpiration;
     private Model_Cluster_Delivery_Master poClusterDeliveryMaster;
     private Model_Cluster_Delivery_Detail poClusterDeliveryDetail;
+
+    public LogWrapper getLogWrapper() {
+        return poLogWrapper;
+    }
+
+    public void setLogWrapper(LogWrapper logWrapper) {
+        this.poLogWrapper = logWrapper;
+    }
 
     //Delivery_Schedule_Master & Details
     public Model_Delivery_Schedule_Master DeliverySchedule() {
@@ -42,6 +52,7 @@ public class DeliveryIssuanceModels {
             poDeliverySchedule.setApplicationDriver(poGRider);
             poDeliverySchedule.setXML("Model_Delivery_Schedule_Master");
             poDeliverySchedule.setTableName("Delivery_Schedule_Master");
+            poDeliverySchedule.setLogWrapper(poLogWrapper);
             poDeliverySchedule.initialize();
         }
 
@@ -59,6 +70,7 @@ public class DeliveryIssuanceModels {
             poDeliveryScheduleDetail.setApplicationDriver(poGRider);
             poDeliveryScheduleDetail.setXML("Model_Delivery_Schedule_Detail");
             poDeliveryScheduleDetail.setTableName("Delivery_Schedule_Detail");
+            poDeliveryScheduleDetail.setLogWrapper(poLogWrapper);
             poDeliveryScheduleDetail.initialize();
         }
 
@@ -77,6 +89,7 @@ public class DeliveryIssuanceModels {
             poInventoryTransferMaster.setApplicationDriver(poGRider);
             poInventoryTransferMaster.setXML("Model_Inv_Transfer_Master");
             poInventoryTransferMaster.setTableName("Inv_Transfer_Master");
+            poInventoryTransferMaster.setLogWrapper(poLogWrapper);
             poInventoryTransferMaster.initialize();
         }
 
@@ -94,6 +107,7 @@ public class DeliveryIssuanceModels {
             poInventoryTransferDetail.setApplicationDriver(poGRider);
             poInventoryTransferDetail.setXML("Model_Inv_Transfer_Detail");
             poInventoryTransferDetail.setTableName("Inv_Transfer_Detail");
+            poInventoryTransferDetail.setLogWrapper(poLogWrapper);
             poInventoryTransferDetail.initialize();
         }
 
@@ -111,12 +125,13 @@ public class DeliveryIssuanceModels {
             poInventoryTransferDetailExpiration.setApplicationDriver(poGRider);
             poInventoryTransferDetailExpiration.setXML("Model_Inv_Transfer_Detail_Expiration");
             poInventoryTransferDetailExpiration.setTableName("Inv_Transfer_Detail_Expiration");
+            poInventoryTransferDetailExpiration.setLogWrapper(poLogWrapper);
             poInventoryTransferDetailExpiration.initialize();
         }
 
         return poInventoryTransferDetailExpiration;
     }
-    
+
     public Model_Cluster_Delivery_Master InventoryClusterDeliveryMaster() {
         if (poGRider == null) {
             System.err.println("DeliveryIssuanceModels.Performing: Application driver is not set.");
@@ -128,6 +143,7 @@ public class DeliveryIssuanceModels {
             poClusterDeliveryMaster.setApplicationDriver(poGRider);
             poClusterDeliveryMaster.setXML("Model_Cluster_Delivery_Master");
             poClusterDeliveryMaster.setTableName("Cluster_Delivery_Master");
+            poClusterDeliveryMaster.setLogWrapper(poLogWrapper);
             poClusterDeliveryMaster.initialize();
         }
 
@@ -145,6 +161,7 @@ public class DeliveryIssuanceModels {
             poClusterDeliveryDetail.setApplicationDriver(poGRider);
             poClusterDeliveryDetail.setXML("Model_Cluster_Delivery_Detail");
             poClusterDeliveryDetail.setTableName("Cluster_Delivery_Detail");
+            poClusterDeliveryDetail.setLogWrapper(poLogWrapper);
             poClusterDeliveryDetail.initialize();
         }
 

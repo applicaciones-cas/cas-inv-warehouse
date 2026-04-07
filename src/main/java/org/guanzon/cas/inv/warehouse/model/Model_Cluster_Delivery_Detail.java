@@ -8,10 +8,10 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.inv.warehouse.InventoryStockIssuanceNeo;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceControllers;
+import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceModels;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.inv.warehouse.t4.model.services.DeliveryIssuanceModels;
 
 /**
  *
@@ -22,7 +22,6 @@ public class Model_Cluster_Delivery_Detail extends Model {
     private Model_Branch poBranch;
     private Model_Inventory_Transfer_Master poInventoryMaster;
     private InventoryStockIssuanceNeo poIssuance;
-
 
     @Override
     public void initialize() {
@@ -53,6 +52,7 @@ public class Model_Cluster_Delivery_Detail extends Model {
             this.poInventoryMaster = new DeliveryIssuanceModels(poGRider).InventoryTransferMaster();
             this.poIssuance = new DeliveryIssuanceControllers(poGRider, null).InventoryStockIssuanceNeo();
             poIssuance.initTransaction();
+            poIssuance.setWithParent(true);
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException | GuanzonException e) {
             logwrapr.severe(e.getMessage());
@@ -182,21 +182,26 @@ public class Model_Cluster_Delivery_Detail extends Model {
         return this.poBranch;
     }
 
-
     public InventoryStockIssuanceNeo InventoryTransfer() throws SQLException, GuanzonException, CloneNotSupportedException {
         if (!"".equals(getValue("sReferNox")) && getValue("sReferNox") != null) {
             if (this.poIssuance
                     .getMaster().getTransactionNo() != null) {
                 if (this.poIssuance.getEditMode() == 0 && this.poIssuance
                         .getMaster().getTransactionNo().equals(getValue("sReferNox"))) {
+
+                    poIssuance.setWithParent(true);
                     return this.poIssuance;
                 }
                 if (this.poIssuance.getEditMode() == 1 && this.poIssuance
                         .getMaster().getTransactionNo().equals(getValue("sReferNox"))) {
+
+                    poIssuance.setWithParent(true);
                     return this.poIssuance;
                 }
                 if (this.poIssuance.getEditMode() == 2 && this.poIssuance
                         .getMaster().getTransactionNo().equals(getValue("sReferNox"))) {
+
+                    poIssuance.setWithParent(true);
                     return this.poIssuance;
                 }
             }
@@ -206,7 +211,7 @@ public class Model_Cluster_Delivery_Detail extends Model {
 //                    //auto update mode
 ////                    poIssuance.UpdateTransaction();
 //                }
-                 return this.poIssuance;
+                return this.poIssuance;
             }
             this.poIssuance.initTransaction();
             poIssuance.NewTransaction();

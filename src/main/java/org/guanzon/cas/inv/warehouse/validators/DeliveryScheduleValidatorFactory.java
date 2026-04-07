@@ -11,25 +11,26 @@ public class DeliveryScheduleValidatorFactory {
 
     public static GValidator make(String industryId) {
         switch (industryId) {
-            case "01": //Mobile Phone
+            case "00": //Mobile Phone & Appliance
                 return new DeliverySchedule_MP();
-            case "02": //Motorcycle
+            case "01": //Motorcycle
                 return new DeliverySchedule_MC();
-            case "03": //Vehicle
+            case "02": //Vehicle
+            case "05":
+            case "06":
                 return new DeliverySchedule_Vehicle();
-            case "04": //Hospitality
+            case "03": //Hospitality
                 return new DeliverySchedule_Hospitality();
-            case "05": //Los Pedritos
+            case "04": //Los Pedritos
                 return new DeliverySchedule_LP();
-            case "06": //General
+            case "07": //General
+            case "08":
+            case "09":
+            case "10":
                 return new DeliverySchedule_General();
-            case "07": //Appliances
-                return new DeliverySchedule_Appliance();
                 
-            case "": //Main Office
+            default: //Main Office
                 return new DeliverySchedule_General();
-            default:
-                return null;
         }
     }
 
