@@ -381,26 +381,26 @@ public class InventoryRequestApproval extends Transaction {
         //create this function if has Categorized Report
         switch (psCategorCD) {
 
-            case "0001"://CELLPHONE
+            case "0000001"://CELLPHONE
                 return "InventoryStockRequestApprovedMP";
-            case "0002"://APPLIANCES
+            case "0000002"://APPLIANCES
                 return "InventoryStockRequestApprovedAppliance";
-            case "0003"://MC UNIT
+            case "0000003"://MC UNIT
                 return "InventoryStockRequestApprovedMC";
-            case "0004"://MC SPAREPARTS
+            case "0000004"://MC SPAREPARTS
                 return "InventoryStockRequestApprovedMCSP";
-            case "0005"://CAR UNIT
+            case "0000005"://CAR UNIT
                 return "InventoryStockRequestApprovedCar";
-            case "0006"://CAR SPAREPARTS
+            case "0000006"://CAR SPAREPARTS
                 return "InventoryStockRequestApprovedCarSP";
-            case "0007"://GENERAL
+            case "0000007"://GENERAL
                 return "InventoryStockRequestApprovedGeneral";
-            case "0008"://LP - Food
+            case "0000008"://LP - Food
                 return "InventoryStockRequestApprovedLPFood";
-            case "0009"://Monarch - Food
+            case "0000009"://Monarch - Food
                 return "InventoryStockRequestApprovedMonarchFood";
             default:
-                return "";
+                return "InventoryStockRequestApprovedGeneral";
         }
 
     }

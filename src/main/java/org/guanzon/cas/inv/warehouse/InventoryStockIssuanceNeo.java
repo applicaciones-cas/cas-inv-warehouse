@@ -31,12 +31,12 @@ import org.guanzon.cas.inv.warehouse.status.InventoryStockIssuanceStatus;
 import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Detail_Expiration;
 import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Master;
-import ph.com.guanzongroup.cas.inv.warehouse.t4.model.services.DeliveryIssuanceModels;
 import org.guanzon.cas.inv.InventoryBrowse;
 import org.guanzon.cas.inv.services.InvControllers;
 import org.guanzon.cas.inv.warehouse.report.ReportUtil;
 import org.guanzon.cas.inv.warehouse.report.ReportUtilListener;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceControllers;
+import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceModels;
 import org.guanzon.cas.inv.warehouse.validators.InventoryIssuanceValidatorFactory;
 import org.guanzon.cas.parameter.services.ParamControllers;
 
@@ -308,9 +308,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
-        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, getMaster().getTransactionNo());
-
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
         poJSON = statusChange(poMaster.getTable(),
                 (String) poMaster.getValue("sTransNox"),
                 "ConfirmTransaction",
@@ -329,15 +329,19 @@ public class InventoryStockIssuanceNeo extends Transaction {
                     poJSON = SaveIssuedTransaction(lnCtr);
 
                     if (!"success".equals((String) poJSON.get("result"))) {
-                        poGRider.rollbackTrans();
+
+                        if (!pbWthParent) {
+                            poGRider.rollbackTrans();
+                        }
                         return poJSON;
                     }
                 }
             }
         }
 
-        poGRider.commitTrans();
-
+        if (!pbWthParent) {
+            poGRider.commitTrans();
+        }
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction confirmed successfully.");
@@ -393,15 +397,18 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        poGRider.beginTrans("UPDATE STATUS", "PostTransaction", SOURCE_CODE, getMaster().getTransactionNo());
-
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "PostTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
         poJSON = statusChange(poMaster.getTable(),
                 (String) poMaster.getValue("sTransNox"),
                 "PostTransaction",
                 InventoryStockIssuanceStatus.POSTED,
                 false, true);
         if ("error".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
+            if (!pbWthParent) {
+                poGRider.rollbackTrans();
+            }
             return poJSON;
         }
 
@@ -417,13 +424,17 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 poJSON = loIssuance.PostTransaction();
 
                 if (!"success".equals((String) poJSON.get("result"))) {
-                    poGRider.rollbackTrans();
+                    if (!pbWthParent) {
+                        poGRider.rollbackTrans();
+                    }
                     return poJSON;
                 }
             }
         }
-        poGRider.commitTrans();
 
+        if (!pbWthParent) {
+            poGRider.commitTrans();
+        }
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction posted successfully.");
@@ -464,20 +475,24 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, getMaster().getTransactionNo());
-
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
         poJSON = statusChange(poMaster.getTable(),
                 (String) poMaster.getValue("sTransNox"),
                 "CancelTransaction",
                 InventoryStockIssuanceStatus.CANCELLED,
                 false, true);
         if ("error".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
+            if (!pbWthParent) {
+                poGRider.rollbackTrans();
+            }
             return poJSON;
         }
 
-        poGRider.commitTrans();
-
+        if (!pbWthParent) {
+            poGRider.commitTrans();
+        }
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction cancelled successfully.");
@@ -517,20 +532,24 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, getMaster().getTransactionNo());
-
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
         poJSON = statusChange(poMaster.getTable(),
                 (String) poMaster.getValue("sTransNox"),
                 "VoidTransaction",
                 InventoryStockIssuanceStatus.VOID,
                 false, true);
         if ("error".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
+            if (!pbWthParent) {
+                poGRider.rollbackTrans();
+            }
             return poJSON;
         }
 
-        poGRider.commitTrans();
-
+        if (!pbWthParent) {
+            poGRider.commitTrans();
+        }
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction voided successfully.");
@@ -1319,8 +1338,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        poGRider.beginTrans("UPDATE STATUS", "Process Transaction Print Tag", SOURCE_CODE, getMaster().getTransactionNo());
-
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "Process Transaction Print Tag", SOURCE_CODE, getMaster().getTransactionNo());
+        }
         String lsSQL = "UPDATE "
                 + poMaster.getTable()
                 + " SET   cPrintedx = " + SQLUtil.toSQL(InventoryStockIssuanceStatus.CONFIRMED)
@@ -1330,7 +1350,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 poMaster.getTable(),
                 poGRider.getBranchCode(), "", "");
         if (lnResult <= 0L) {
-            poGRider.rollbackTrans();
+            if (!pbWthParent) {
+                poGRider.rollbackTrans();
+            }
 
             poJSON = new JSONObject();
             poJSON.put("result", "error");

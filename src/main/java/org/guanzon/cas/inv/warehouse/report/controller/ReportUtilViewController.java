@@ -417,7 +417,7 @@ public class ReportUtilViewController implements Initializable {
             String message = (String) loJSON.get("message");
             Platform.runLater(() -> {
                 if (message != null) {
-                    ShowMessageFX.Warning(null, psReportName, fsModule + ": " + message);
+                    ShowMessageFX.Warning(null, psReportName,  message);
                 }
             });
             return false;
@@ -426,7 +426,7 @@ public class ReportUtilViewController implements Initializable {
 
         Platform.runLater(() -> {
             if (message != null) {
-                ShowMessageFX.Information(null, psReportName, fsModule + ": " + message);
+                ShowMessageFX.Information(null, psReportName,  message);
             }
         });
         return true;

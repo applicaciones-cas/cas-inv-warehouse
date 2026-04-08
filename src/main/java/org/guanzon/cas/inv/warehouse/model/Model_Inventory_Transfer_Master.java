@@ -76,7 +76,10 @@ public class Model_Inventory_Transfer_Master extends Model {
             pnEditMode = EditMode.UNKNOWN;
 
         } catch (SQLException e) {
-            logwrapr.severe(e.getMessage());
+            if (logwrapr != null) {
+                logwrapr.severe(e.getMessage());
+            }
+            System.out.println(e.getMessage());
             System.exit(1);
         }
     }
@@ -203,7 +206,7 @@ public class Model_Inventory_Transfer_Master extends Model {
     }
 
     //dReceived
-    public JSONObject setReceivedDate(LocalDateTime  receivedDate) {
+    public JSONObject setReceivedDate(LocalDateTime receivedDate) {
         return setValue("dReceived", Timestamp.valueOf(receivedDate));
     }
 
@@ -291,8 +294,8 @@ public class Model_Inventory_Transfer_Master extends Model {
     public String getPrintStatus() {
         return (String) getValue("cPrintedx");
     }
-    
-     public boolean isPrintedStatus() {
+
+    public boolean isPrintedStatus() {
         return RecordStatus.ACTIVE.equals(getValue("cPrintedx"));
     }
 

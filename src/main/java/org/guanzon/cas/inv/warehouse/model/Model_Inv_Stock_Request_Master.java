@@ -37,6 +37,9 @@
                 poEntity.updateObject("nCurrInvx", 0);
                 poEntity.updateObject("nEstInvxx", 0);
                 poEntity.updateObject("nEntryNox", 0);
+                poEntity.updateNull("sSourceCd");
+                poEntity.updateNull("sSourceNo");
+                poEntity.updateObject("cProcessd", 0);
                 poEntity.updateString("cTranStat", StockRequestStatus.OPEN);
                 //end - assign default values
 

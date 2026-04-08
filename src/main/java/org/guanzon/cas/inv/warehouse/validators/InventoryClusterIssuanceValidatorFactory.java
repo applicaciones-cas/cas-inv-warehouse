@@ -11,25 +11,25 @@ public class InventoryClusterIssuanceValidatorFactory {
 
     public static GValidator make(String industryId) {
         switch (industryId) {
-            case "01": //Mobile Phone
+            case "00": //Mobile Phone
                 return new InventoryStockClusterIssuance_MP();
-            case "02": //Motorcycle
+            case "01": //Motorcycle
                 return new InventoryStockClusterIssuance_MC();
-            case "03": //Vehicle
+            case "02":
+            case "05":
+            case "06": //Vehicle
                 return new InventoryStockClusterIssuance_Vehicle();
-            case "04": //Monarch
+            case "03": //Monarch
                 return new InventoryStockClusterIssuance_Monarch();
-            case "05": //Los Pedritos
+            case "04": //Los Pedritos
                 return new InventoryStockClusterIssuance_LP();
-            case "06": //General
-                return new InventoryStockClusterIssuance_General();
-            case "07": //Appliances
-                return new InventoryStockClusterIssuance_Appliance();
-
-            case "": //Main Office
+            case "07": 
+            case "08":
+            case "09":
+            case "10"://General / Main Office
                 return new InventoryStockClusterIssuance_General();
             default:
-                return null;
+                return new InventoryStockClusterIssuance_General();
         }
     }
 
