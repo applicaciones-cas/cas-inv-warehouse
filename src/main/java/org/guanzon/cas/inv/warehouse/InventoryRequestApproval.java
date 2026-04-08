@@ -118,7 +118,7 @@ public class InventoryRequestApproval extends Transaction {
                 + ", a.sTransNox"
                 + " FROM Inv_Stock_Request_Master a"
                 + "     LEFT JOIN Branch_Others b ON a.sBranchCD = b.sBranchCd"
-                + "     LEFT JOIN Branch_Cluster c ON b.sClustrID = c.sClustrID"
+                + "     LEFT JOIN Branch_Cluster c ON b.sClustrID = c.sClustrID AND a.sIndstCdx = c.sIndstCdx " 
                 + "         WHERE a.cTranStat = " + SQLUtil.toSQL(StockRequestStatus.CONFIRMED);
     }
 

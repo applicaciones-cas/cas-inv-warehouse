@@ -11,25 +11,25 @@ public class InventoryStockRequestApprovalValidatorFactory {
 
     public static GValidator make(String industryId) {
         switch (industryId) {
-            case "01": //Mobile Phone
+            case "00": //Mobile Phone
                 return new InventoryStockRequestApproval_MP();
-            case "02": //Motorcycle
+            case "01": //Motorcycle
                 return new InventoryStockRequestApproval_MC();
-            case "03": //Vehicle
+            case "02":
+            case "05":
+            case "06": //Vehicle
                 return new InventoryStockRequestApproval_Vehicle();
-            case "04": //Monarch
+            case "03": //Monarch
                 return new InventoryStockRequestApproval_Monarch();
-            case "05": //Los Pedritos
+            case "04": //Los Pedritos
                 return new InventoryStockRequestApproval_LP();
-            case "06": //General
-                return new InventoryStockRequestApproval_General();
-            case "07": //Appliances
-                return new InventoryStockRequestApproval_Appliance();
-
-            case "": //Main Office
+            case "07":
+            case "08":
+            case "09": 
+            case "10"://General
                 return new InventoryStockRequestApproval_General();
             default:
-                return null;
+                return new InventoryStockRequestApproval_General();
         }
     }
 

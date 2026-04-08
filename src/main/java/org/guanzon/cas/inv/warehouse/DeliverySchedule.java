@@ -20,7 +20,7 @@ import org.json.simple.JSONObject;
 import org.guanzon.cas.inv.warehouse.status.DeliveryScheduleStatus;
 import org.guanzon.cas.inv.warehouse.model.Model_Delivery_Schedule_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Delivery_Schedule_Master;
-import ph.com.guanzongroup.cas.inv.warehouse.t4.model.services.DeliveryIssuanceModels;
+import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceModels;
 import org.guanzon.cas.parameter.BranchCluster;
 import org.guanzon.cas.parameter.model.Model_Branch_Cluster_Delivery;
 import org.guanzon.cas.parameter.model.Model_Branch_Others;
@@ -385,6 +385,7 @@ public class DeliverySchedule extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction saved successfully.");
+        openTransaction(getMaster().getTransactionNo());
         return poJSON;
     }
 
@@ -393,6 +394,21 @@ public class DeliverySchedule extends Transaction {
         if (DeliveryScheduleStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already confirmed.");
+            return poJSON;
+        }
+        if (DeliveryScheduleStatus.VOID.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already voided.");
+            return poJSON;
+        }
+        if (DeliveryScheduleStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already cancelled.");
+            return poJSON;
+        }
+        if (DeliveryScheduleStatus.POSTED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already posted.");
             return poJSON;
         }
 
@@ -475,7 +491,7 @@ public class DeliverySchedule extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction confirmed successfully.");
-
+        openTransaction(getMaster().getTransactionNo());
         return poJSON;
     }
 
@@ -528,6 +544,7 @@ public class DeliverySchedule extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction cancelled successfully.");
 
+        openTransaction(getMaster().getTransactionNo());
         return poJSON;
     }
 
@@ -580,6 +597,7 @@ public class DeliverySchedule extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction voided successfully.");
 
+        openTransaction(getMaster().getTransactionNo());
         return poJSON;
     }
 

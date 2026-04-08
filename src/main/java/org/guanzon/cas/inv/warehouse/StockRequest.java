@@ -127,7 +127,7 @@ public class StockRequest extends Transaction {
         //Moved only the script for seeking of approval - Arsiela 10-15-2025 - 14:11:01
 
         //load authorization manager that evaluates current users authority for this process
-        ActionAuthManager loAuth = new ActionAuthManager(poGRider, "cas-purchasing");
+        ActionAuthManager loAuth = new ActionAuthManager(poGRider, "cas-inv-warehouse");
         poJSON = loAuth.isAuthorized();
 
         //check if currenty user is authorized
