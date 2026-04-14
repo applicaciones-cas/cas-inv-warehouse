@@ -3,11 +3,15 @@ package org.guanzon.cas.inv.warehouse;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javafx.application.Platform;
 import net.sf.jasperreports.engine.JRException;
+import org.guanzon.appdriver.agent.ActionAuthManager;
+import org.guanzon.appdriver.agent.MatrixAuthChecker;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -32,13 +36,13 @@ import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Detail_Expiration;
 import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Master;
 import org.guanzon.cas.inv.InventoryBrowse;
-import org.guanzon.cas.inv.services.InvControllers;
+import org.guanzon.cas.inv.InventoryTransaction;
 import org.guanzon.cas.inv.warehouse.report.ReportUtil;
 import org.guanzon.cas.inv.warehouse.report.ReportUtilListener;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceControllers;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceModels;
 import org.guanzon.cas.inv.warehouse.validators.InventoryIssuanceValidatorFactory;
-import org.guanzon.cas.parameter.services.ParamControllers;
+import org.json.simple.JSONArray;
 
 public class InventoryStockIssuanceNeo extends Transaction {
 
@@ -303,24 +307,171 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
+        if (InventoryStockIssuanceStatus.VOID.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Void.");
+            return poJSON;
+        }
+        if (InventoryStockIssuanceStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Cancelled.");
+            return poJSON;
+        }
+
+        if (InventoryStockIssuanceStatus.POSTED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Posted.");
+            return poJSON;
+        }
+
         //validator
         poJSON = isEntryOkay(InventoryStockIssuanceStatus.CONFIRMED);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        boolean lbConfirm = true;
+        String lsStatus = InventoryStockIssuanceStatus.CONFIRMED;
+        MatrixAuthChecker check = null;
+
         if (!pbWthParent) {
-            poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+            //validator
+            poJSON = isEntryOkay(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+            //get the matrix return from isEntryOkey
+            JSONArray loMatrix = (JSONArray) poJSON.get("matrix");
+
+            //Check if there is a authorization request
+            if (loMatrix != null) {
+                //initialized MatrixAuthChecker object
+                check = new MatrixAuthChecker(poGRider, SOURCE_CODE, getMaster().getTransactionNo());
+                //load the current autorization matrix request
+                poJSON = check.loadAuth();
+
+                //check if loading is okey
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
+                //check if authorization request is already approved by all authorizing personnel
+                if (!check.isAuthOkay()) {
+                    //check if authorization request allows system approval
+                    if (!check.isAllowSys()) {
+                        //extract the JSONObject from JSONArray
+                        JSONObject loJson = (JSONObject) loMatrix.get(0);
+
+                        //check if current user is authorized to approved this transaction
+                        poJSON = check.authTrans((String) loJson.get("sAuthType"), poGRider.getUserID());
+
+                        //If not authorized/request system approval
+                        if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                            poJSON = ShowDialogFX.getUserApproval(poGRider);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+
+                            //check if approving officer is authorized
+                            String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                            //check if current user is authorized to approved this transaction
+                            poJSON = check.authTrans((String) loJson.get("sAuthType"), lsUserIDxx);
+                            //user is not authorized
+                            if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                    }
+
+                    //check if authorization request is already approved by all authorizing personnel
+                    if (!check.isAuthOkay()) {
+                        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+
+                        lsStatus = Character.toString((char) (64 + Integer.parseInt(lsStatus)));
+                        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            poGRider.rollbackTrans();
+                            return poJSON;
+                        }
+
+                        poGRider.commitTrans();
+
+                        poJSON.put("result", "matrix");
+                        return poJSON;
+                    }
+                }
+            } //there are no authorization event request
+            else {
+                //Replaced script above by calling of method Arsiela 10-15-2025 09:25:01
+                poJSON = seekApproval();
+                if ("error".equalsIgnoreCase((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
         }
-        poJSON = statusChange(poMaster.getTable(),
-                (String) poMaster.getValue("sTransNox"),
-                "ConfirmTransaction",
-                InventoryStockIssuanceStatus.CONFIRMED,
-                false, true);
-        if ("error".equals((String) poJSON.get("result"))) {
+
+//========================================Authority Check End===============================================
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
+
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+
+        if (!"success".equals(
+                (String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
         }
-        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
+
+        String lsCondition = "0";
+
+        InventoryTransaction loTrans = new InventoryTransaction(poGRider);
+        loTrans.Delivery((String) poMaster.getValue("sTransNox"), (Date) poMaster.getValue("dTransact"), false);
+
+        for (Model loDetail : paDetail) {
+            Model_Inventory_Transfer_Detail detail = (Model_Inventory_Transfer_Detail) loDetail;
+
+            //why int when cSerialize supposedly be a character
+            //            if("1".equals((int) detail.getColumn("cSerialze"))){
+            if (detail.Inventory().isSerialized()) {
+                String lsSerialID = detail.InventorySerial().getSerialId();
+
+                if (!lsSerialID.isEmpty()) {
+
+                    loTrans.addSerial((String) poMaster.getValue("sIndstCdx"), lsSerialID,
+                            !detail.getOrderNo().isEmpty(),
+                            detail.Inventory().getCost().doubleValue(),
+                            detail.InventorySerial().getLocation());
+                }
+            } else {
+                loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
+                        lsCondition,
+                        detail.getQuantity().doubleValue(),
+                        0,
+                        detail.Inventory().getCost().doubleValue());
+
+            }
+        }
+
+        loTrans.saveTransaction();
+
+        //Update status for this transaction
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+
+        if (!"success".equals(
+                (String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        if (check
+                != null) {
+            check.postAuth();
+        }
+
+        for (int lnCtr = 0;
+                lnCtr < paDetail.size();
+                lnCtr++) {
             Model_Inventory_Transfer_Detail loDetail = (Model_Inventory_Transfer_Detail) paDetail.get(lnCtr);
 
             if (loDetail.getOrderNo() != null) {
@@ -342,10 +493,16 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if (!pbWthParent) {
             poGRider.commitTrans();
         }
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction confirmed successfully.");
 
+        openTransaction(getMaster().getTransactionNo());
+        poJSON = new JSONObject();
+
+        poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction confirmed successfully.");
+        } else {
+            poJSON.put("message", "Transaction confirmation request submitted successfully.");
+        }
         return poJSON;
     }
 
@@ -367,52 +524,197 @@ public class InventoryStockIssuanceNeo extends Transaction {
         return poJSON;
     }
 
+    public JSONObject UnSaveIssuedTransaction(int EntryNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        Model_Inventory_Transfer_Detail loDetail = (Model_Inventory_Transfer_Detail) paDetail.get(EntryNo);
+        Model_Inv_Stock_Request_Detail loStockDetail = loDetail.InventoryStockRequest();
+        if (loStockDetail.getEditMode() == EditMode.READY) {
+            loStockDetail.updateRecord();
+            loStockDetail.setIssued(-loDetail.getQuantity());
+            poJSON = loStockDetail.saveRecord();
+
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
     public JSONObject PostTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        if (getEditMode() != EditMode.UPDATE
-                && getEditMode() != EditMode.READY) {
+        if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Edit Mode.");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already confirmed.");
+            return poJSON;
+        }
+
+        if (InventoryStockIssuanceStatus.VOID.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Void.");
+            return poJSON;
+        }
+        if (InventoryStockIssuanceStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Cancelled.");
             return poJSON;
         }
 
         if (InventoryStockIssuanceStatus.POSTED.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already posted.");
+            poJSON.put("message", "Transaction was already Posted.");
             return poJSON;
         }
 
         //validator
-        poJSON = isEntryOkay(InventoryStockIssuanceStatus.POSTED);
+        poJSON = isEntryOkay(InventoryStockIssuanceStatus.CONFIRMED);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        poMaster.setValue("sReceived", poGRider.Encrypt(poGRider.getUserID()));
-        if (!psApprovalUser.isEmpty()) {
-            poMaster.setValue("sApproved", poGRider.Encrypt(psApprovalUser));
-        }
-        poJSON = SaveTransaction();
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
+        boolean lbConfirm = true;
+        String lsStatus = InventoryStockIssuanceStatus.CONFIRMED;
+        MatrixAuthChecker check = null;
 
         if (!pbWthParent) {
-            poGRider.beginTrans("UPDATE STATUS", "PostTransaction", SOURCE_CODE, getMaster().getTransactionNo());
-        }
-        poJSON = statusChange(poMaster.getTable(),
-                (String) poMaster.getValue("sTransNox"),
-                "PostTransaction",
-                InventoryStockIssuanceStatus.POSTED,
-                false, true);
-        if ("error".equals((String) poJSON.get("result"))) {
-            if (!pbWthParent) {
-                poGRider.rollbackTrans();
+            //validator
+            poJSON = isEntryOkay(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
             }
+
+            //get the matrix return from isEntryOkey
+            JSONArray loMatrix = (JSONArray) poJSON.get("matrix");
+
+            //Check if there is a authorization request
+            if (loMatrix != null) {
+                //initialized MatrixAuthChecker object
+                check = new MatrixAuthChecker(poGRider, SOURCE_CODE, getMaster().getTransactionNo());
+                //load the current autorization matrix request
+                poJSON = check.loadAuth();
+
+                //check if loading is okey
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
+                //check if authorization request is already approved by all authorizing personnel
+                if (!check.isAuthOkay()) {
+                    //check if authorization request allows system approval
+                    if (!check.isAllowSys()) {
+                        //extract the JSONObject from JSONArray
+                        JSONObject loJson = (JSONObject) loMatrix.get(0);
+
+                        //check if current user is authorized to approved this transaction
+                        poJSON = check.authTrans((String) loJson.get("sAuthType"), poGRider.getUserID());
+
+                        //If not authorized/request system approval
+                        if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                            poJSON = ShowDialogFX.getUserApproval(poGRider);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+
+                            //check if approving officer is authorized
+                            String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                            //check if current user is authorized to approved this transaction
+                            poJSON = check.authTrans((String) loJson.get("sAuthType"), lsUserIDxx);
+                            //user is not authorized
+                            if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                    }
+
+                    //check if authorization request is already approved by all authorizing personnel
+                    if (!check.isAuthOkay()) {
+                        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+
+                        lsStatus = Character.toString((char) (64 + Integer.parseInt(lsStatus)));
+                        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            poGRider.rollbackTrans();
+                            return poJSON;
+                        }
+
+                        poGRider.commitTrans();
+
+                        poJSON.put("result", "matrix");
+                        return poJSON;
+                    }
+                }
+            } //there are no authorization event request
+            else {
+                //Replaced script above by calling of method Arsiela 10-15-2025 09:25:01
+                poJSON = seekApproval();
+                if ("error".equalsIgnoreCase((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
+        }
+
+//========================================Authority Check End===============================================
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
+
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+
+        if (!"success".equals(
+                (String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
         Model_Inventory_Transfer_Master loMaster = (Model_Inventory_Transfer_Master) this.poMaster;
+
+        String lsCondition = "0";
+
+        InventoryTransaction loTrans = new InventoryTransaction(poGRider);
+        loTrans.DeliveryAcceptance((String) poMaster.getValue("sTransNox"), (Date) poMaster.getValue("dTransact"), false);
+
+        for (Model loDetail : paDetail) {
+            Model_Inventory_Transfer_Detail detail = (Model_Inventory_Transfer_Detail) loDetail;
+
+            //why int when cSerialize supposedly be a character
+            //            if("1".equals((int) detail.getColumn("cSerialze"))){
+            if (detail.Inventory().isSerialized()) {
+                String lsSerialID = detail.InventorySerial().getSerialId();
+
+                if (!lsSerialID.isEmpty()) {
+
+                    loTrans.addSerial((String) poMaster.getValue("sIndstCdx"), lsSerialID,
+                            !detail.getOrderNo().isEmpty(),
+                            detail.Inventory().getCost().doubleValue(),
+                            detail.InventorySerial().getLocation());
+                }
+            } else {
+                loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
+                        lsCondition,
+                        detail.getQuantity().doubleValue(),
+                        0,
+                        detail.Inventory().getCost().doubleValue());
+
+            }
+        }
+
+        loTrans.saveTransaction();
+
+        //Update status for this transaction
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+
+        if (!"success".equals(
+                (String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
 
         if (loMaster.getOrderNo() != null) {
             if (!loMaster.getOrderNo().isEmpty()) {
@@ -432,13 +734,45 @@ public class InventoryStockIssuanceNeo extends Transaction {
             }
         }
 
+        if (check
+                != null) {
+            check.postAuth();
+        }
+
+        for (int lnCtr = 0;
+                lnCtr < paDetail.size();
+                lnCtr++) {
+            Model_Inventory_Transfer_Detail loDetail = (Model_Inventory_Transfer_Detail) paDetail.get(lnCtr);
+
+            if (loDetail.getOrderNo() != null) {
+                if (!loDetail.getOrderNo().isEmpty()) {
+                    poJSON = new JSONObject();
+                    poJSON = SaveIssuedTransaction(lnCtr);
+
+                    if (!"success".equals((String) poJSON.get("result"))) {
+
+                        if (!pbWthParent) {
+                            poGRider.rollbackTrans();
+                        }
+                        return poJSON;
+                    }
+                }
+            }
+        }
+
         if (!pbWthParent) {
             poGRider.commitTrans();
         }
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction posted successfully.");
 
+        openTransaction(getMaster().getTransactionNo());
+        poJSON = new JSONObject();
+
+        poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction confirmed successfully.");
+        } else {
+            poJSON.put("message", "Transaction confirmation request submitted successfully.");
+        }
         return poJSON;
     }
 
@@ -447,25 +781,30 @@ public class InventoryStockIssuanceNeo extends Transaction {
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Edit Mode");
+            poJSON.put("message", "No transacton was loaded.");
             return poJSON;
         }
-//
-//        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Transaction was already confirmed.");
-//            return poJSON;
-//        }
 
-        if (InventoryStockIssuanceStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) {
+        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already cancelled.");
+            poJSON.put("message", "Transaction was already confirmed.");
             return poJSON;
         }
 
         if (InventoryStockIssuanceStatus.VOID.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already voided.");
+            poJSON.put("message", "Transaction was already Void.");
+            return poJSON;
+        }
+        if (InventoryStockIssuanceStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Cancelled.");
+            return poJSON;
+        }
+
+        if (InventoryStockIssuanceStatus.POSTED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Posted.");
             return poJSON;
         }
 
@@ -474,29 +813,179 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        boolean lbConfirm = true;
+        String lsStatus = InventoryStockIssuanceStatus.CANCELLED;
+        MatrixAuthChecker check = null;
 
         if (!pbWthParent) {
-            poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, getMaster().getTransactionNo());
-        }
-        poJSON = statusChange(poMaster.getTable(),
-                (String) poMaster.getValue("sTransNox"),
-                "CancelTransaction",
-                InventoryStockIssuanceStatus.CANCELLED,
-                false, true);
-        if ("error".equals((String) poJSON.get("result"))) {
-            if (!pbWthParent) {
-                poGRider.rollbackTrans();
+            //validator
+            poJSON = isEntryOkay(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
             }
+
+            //get the matrix return from isEntryOkey
+            JSONArray loMatrix = (JSONArray) poJSON.get("matrix");
+
+            //Check if there is a authorization request
+            if (loMatrix != null) {
+                //initialized MatrixAuthChecker object
+                check = new MatrixAuthChecker(poGRider, SOURCE_CODE, getMaster().getTransactionNo());
+                //load the current autorization matrix request
+                poJSON = check.loadAuth();
+
+                //check if loading is okey
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
+                //check if authorization request is already approved by all authorizing personnel
+                if (!check.isAuthOkay()) {
+                    //check if authorization request allows system approval
+                    if (!check.isAllowSys()) {
+                        //extract the JSONObject from JSONArray
+                        JSONObject loJson = (JSONObject) loMatrix.get(0);
+
+                        //check if current user is authorized to approved this transaction
+                        poJSON = check.authTrans((String) loJson.get("sAuthType"), poGRider.getUserID());
+
+                        //If not authorized/request system approval
+                        if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                            poJSON = ShowDialogFX.getUserApproval(poGRider);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+
+                            //check if approving officer is authorized
+                            String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                            //check if current user is authorized to approved this transaction
+                            poJSON = check.authTrans((String) loJson.get("sAuthType"), lsUserIDxx);
+                            //user is not authorized
+                            if (!"success".equalsIgnoreCase((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                    }
+
+                    //check if authorization request is already approved by all authorizing personnel
+                    if (!check.isAuthOkay()) {
+                        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+
+                        lsStatus = Character.toString((char) (64 + Integer.parseInt(lsStatus)));
+                        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            poGRider.rollbackTrans();
+                            return poJSON;
+                        }
+
+                        poGRider.commitTrans();
+
+                        poJSON.put("result", "matrix");
+                        return poJSON;
+                    }
+                }
+            } //there are no authorization event request
+            else {
+                //Replaced script above by calling of method Arsiela 10-15-2025 09:25:01
+                poJSON = seekApproval();
+                if ("error".equalsIgnoreCase((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
+        }
+
+//========================================Authority Check End===============================================
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "Post Transaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
+
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+
+        if (!"success".equals(
+                (String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
+        }
+
+        String lsCondition = "0";
+
+        InventoryTransaction loTrans = new InventoryTransaction(poGRider);
+        loTrans.Delivery((String) poMaster.getValue("sTransNox"), (Date) poMaster.getValue("dTransact"), true);
+
+        for (Model loDetail : paDetail) {
+            Model_Inventory_Transfer_Detail detail = (Model_Inventory_Transfer_Detail) loDetail;
+
+            //why int when cSerialize supposedly be a character
+            //            if("1".equals((int) detail.getColumn("cSerialze"))){
+            if (detail.Inventory().isSerialized()) {
+                String lsSerialID = detail.InventorySerial().getSerialId();
+
+                if (!lsSerialID.isEmpty()) {
+
+                    loTrans.addSerial((String) poMaster.getValue("sIndstCdx"), lsSerialID,
+                            !detail.getOrderNo().isEmpty(),
+                            detail.Inventory().getCost().doubleValue(),
+                            detail.InventorySerial().getLocation());
+                }
+            } else {
+                loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
+                        lsCondition,
+                        detail.getQuantity().doubleValue(),
+                        0,
+                        detail.Inventory().getCost().doubleValue());
+
+            }
+        }
+
+        loTrans.saveTransaction();
+
+        //Update status for this transaction
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, !lbConfirm, true);
+
+        if (!"success".equals(
+                (String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        if (check
+                != null) {
+            check.postAuth();
+        }
+
+        for (int lnCtr = 0;
+                lnCtr < paDetail.size();
+                lnCtr++) {
+            Model_Inventory_Transfer_Detail loDetail = (Model_Inventory_Transfer_Detail) paDetail.get(lnCtr);
+
+            if (loDetail.getOrderNo() != null) {
+                if (!loDetail.getOrderNo().isEmpty()) {
+                    poJSON = new JSONObject();
+                    poJSON = UnSaveIssuedTransaction(lnCtr);
+
+                    if (!"success".equals((String) poJSON.get("result"))) {
+
+                        if (!pbWthParent) {
+                            poGRider.rollbackTrans();
+                        }
+                        return poJSON;
+                    }
+                }
+            }
         }
 
         if (!pbWthParent) {
             poGRider.commitTrans();
         }
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction cancelled successfully.");
 
+        openTransaction(getMaster().getTransactionNo());
+        poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction cancelled successfully.");
+        } else {
+            poJSON.put("message", "Transaction cancellation request submitted successfully.");
+        }
         return poJSON;
     }
 
@@ -550,6 +1039,8 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if (!pbWthParent) {
             poGRider.commitTrans();
         }
+
+        openTransaction(getMaster().getTransactionNo());
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction voided successfully.");
@@ -1218,6 +1709,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
             public void onReportPrint() {
                 System.out.println("Report printing...");
                 try {
+                    if (pbWthParent) {
+                        poGRider.beginTrans("UPDATE STATUS", "Process Transaction Print Tag", SOURCE_CODE, getMaster().getTransactionNo());
+                    }
                     if (!getMaster().isPrintedStatus()) {
                         if (!isJSONSuccess(PrintTransaction(), "Print Record",
                                 "Initialize Record Print! ")) {
@@ -1230,6 +1724,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
                         }
                     }
 
+                    if (pbWthParent) {
+                        poGRider.commitTrans();
+                    }
                     poReportJasper.CloseReportUtil();
 
                 } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
@@ -1360,8 +1857,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        poGRider.commitTrans();
-
+        if (!pbWthParent) {
+            poGRider.commitTrans();
+        }
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction Printed successfully.");
@@ -1444,4 +1942,52 @@ public class InventoryStockIssuanceNeo extends Transaction {
 
     }
 
+    public JSONObject seekApproval()
+            throws SQLException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        //Moved only the script for seeking of approval - Arsiela 10-15-2025 - 14:11:01
+
+        //load authorization manager that evaluates current users authority for this process
+        ActionAuthManager loAuth = new ActionAuthManager(poGRider, "cas-inv-warehouse");
+        poJSON = loAuth.isAuthorized();
+
+        //check if currenty user is authorized
+        if (!((String) poJSON.get("result")).equalsIgnoreCase("true")) {
+            //if not authorized, check the type type of authorization required 
+            if (((String) poJSON.get("code")).equalsIgnoreCase("regular")) {
+                //show process need regular authorization
+                ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
+                //get authorization from authoried personnel
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
+                //check if approving officer is authorized
+                String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                int lnUserLevl = Integer.parseInt(poJSON.get("nUserLevl").toString());
+                poJSON = loAuth.isAuthorized(lsUserIDxx, lnUserLevl);
+
+                //if approving is not authorized then do not continue process
+                if (!((String) poJSON.get("result")).equalsIgnoreCase("true")) {
+                    ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
+            } //needs authorization thru authorization matrix
+            else {
+                //show process needs authorization through the authority matrix
+                ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+
+    }
 }
