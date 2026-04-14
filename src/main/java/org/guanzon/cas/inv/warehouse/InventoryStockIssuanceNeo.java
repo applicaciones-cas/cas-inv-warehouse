@@ -439,17 +439,18 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 if (!lsSerialID.isEmpty()) {
 
                     loTrans.addSerial((String) poMaster.getValue("sIndstCdx"), lsSerialID,
-                            !detail.getOrderNo().isEmpty(),
+                            detail.getOrderNo() == null ? false : !detail.getOrderNo().isEmpty(),
                             detail.Inventory().getCost().doubleValue(),
                             detail.InventorySerial().getLocation());
                 }
             } else {
-                loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
-                        lsCondition,
-                        detail.getQuantity().doubleValue(),
-                        0,
-                        detail.Inventory().getCost().doubleValue());
-
+                if (detail.getStockId() != null) {
+                    loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
+                            lsCondition,
+                            detail.getQuantity().doubleValue(),
+                            0,
+                            detail.Inventory().getCost().doubleValue());
+                }
             }
         }
 
@@ -545,15 +546,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
     public JSONObject PostTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        if (getEditMode() != EditMode.READY) {
+        if (getEditMode() != EditMode.UPDATE) {
             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
-            return poJSON;
-        }
-
-        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already confirmed.");
             return poJSON;
         }
 
@@ -575,12 +570,12 @@ public class InventoryStockIssuanceNeo extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(InventoryStockIssuanceStatus.CONFIRMED);
+        poJSON = isEntryOkay(InventoryStockIssuanceStatus.POSTED);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         boolean lbConfirm = true;
-        String lsStatus = InventoryStockIssuanceStatus.CONFIRMED;
+        String lsStatus = InventoryStockIssuanceStatus.POSTED;
         MatrixAuthChecker check = null;
 
         if (!pbWthParent) {
@@ -691,18 +686,20 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 if (!lsSerialID.isEmpty()) {
 
                     loTrans.addSerial((String) poMaster.getValue("sIndstCdx"), lsSerialID,
-                            !detail.getOrderNo().isEmpty(),
+                            detail.getOrderNo() == null ? false : !detail.getOrderNo().isEmpty(),
                             detail.Inventory().getCost().doubleValue(),
                             detail.InventorySerial().getLocation());
                 }
             } else {
-                loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
-                        lsCondition,
-                        detail.getQuantity().doubleValue(),
-                        0,
-                        detail.Inventory().getCost().doubleValue());
-
+                if (detail.getStockId() != null) {
+                    loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
+                            lsCondition,
+                            detail.getReceivedQuantity().doubleValue(),
+                            0,
+                            detail.Inventory().getCost().doubleValue());
+                }
             }
+
         }
 
         loTrans.saveTransaction();
@@ -716,32 +713,32 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        if (loMaster.getOrderNo() != null) {
-            if (!loMaster.getOrderNo().isEmpty()) {
-                poJSON = new JSONObject();
-                InventoryStockIssuance loIssuance = new DeliveryIssuanceControllers(poGRider, null).InventoryStockIssuance();
-                loIssuance.initTransaction();
-
-                loIssuance.OpenTransaction(loMaster.getOrderNo());
-                poJSON = loIssuance.PostTransaction();
-
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    if (!pbWthParent) {
-                        poGRider.rollbackTrans();
-                    }
-                    return poJSON;
-                }
-            }
-        }
+//        if (loMaster.getOrderNo() != null) {
+//            if (!loMaster.getOrderNo().isEmpty()) {
+//                poJSON = new JSONObject();
+//                InventoryStockIssuance loIssuance = new DeliveryIssuanceControllers(poGRider, null).InventoryStockIssuance();
+//                loIssuance.initTransaction();
+//
+//                loIssuance.OpenTransaction(loMaster.getOrderNo());
+//                loIssuance.getMaster().setArrivalDate(poGRider.getServerDate());
+//                loIssuance.setApproving(poGRider.getUserID());
+//                poJSON = loIssuance.PostTransaction();
+//
+//                if (!"success".equals((String) poJSON.get("result"))) {
+//                    if (!pbWthParent) {
+//                        poGRider.rollbackTrans();
+//                    }
+//                    return poJSON;
+//                }
+//            }
+//        }
 
         if (check
                 != null) {
             check.postAuth();
         }
 
-        for (int lnCtr = 0;
-                lnCtr < paDetail.size();
-                lnCtr++) {
+        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
             Model_Inventory_Transfer_Detail loDetail = (Model_Inventory_Transfer_Detail) paDetail.get(lnCtr);
 
             if (loDetail.getOrderNo() != null) {
@@ -767,11 +764,12 @@ public class InventoryStockIssuanceNeo extends Transaction {
         openTransaction(getMaster().getTransactionNo());
         poJSON = new JSONObject();
 
-        poJSON.put("result", "success");
+        poJSON.put(
+                "result", "success");
         if (lbConfirm) {
-            poJSON.put("message", "Transaction confirmed successfully.");
+            poJSON.put("message", "Transaction posted successfully.");
         } else {
-            poJSON.put("message", "Transaction confirmation request submitted successfully.");
+            poJSON.put("message", "Transaction posting request submitted successfully.");
         }
         return poJSON;
     }
@@ -785,12 +783,11 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already confirmed.");
-            return poJSON;
-        }
-
+//        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Transaction was already confirmed.");
+//            return poJSON;
+//        }
         if (InventoryStockIssuanceStatus.VOID.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already Void.");
@@ -923,17 +920,18 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 if (!lsSerialID.isEmpty()) {
 
                     loTrans.addSerial((String) poMaster.getValue("sIndstCdx"), lsSerialID,
-                            !detail.getOrderNo().isEmpty(),
+                            detail.getOrderNo() == null ? false : !detail.getOrderNo().isEmpty(),
                             detail.Inventory().getCost().doubleValue(),
                             detail.InventorySerial().getLocation());
                 }
             } else {
-                loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
-                        lsCondition,
-                        detail.getQuantity().doubleValue(),
-                        0,
-                        detail.Inventory().getCost().doubleValue());
-
+                if (detail.getStockId() != null) {
+                    loTrans.addDetail((String) poMaster.getValue("sIndstCdx"), detail.getStockId(),
+                            lsCondition,
+                            detail.getQuantity().doubleValue(),
+                            0,
+                            detail.Inventory().getCost().doubleValue());
+                }
             }
         }
 
@@ -998,11 +996,11 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-//        if (DeliveryScheduleStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Transaction was already confirmed.");
-//            return poJSON;
-//        }
+        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already confirmed.");
+            return poJSON;
+        }
         if (InventoryStockIssuanceStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already cancelled.");
@@ -1418,6 +1416,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if (!psCategorCD.isEmpty()) {
             lsSQL = MiscUtil.addCondition(lsSQL, "a.sCategrCd = " + SQLUtil.toSQL(psCategorCD));
         }
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.cDelivrTp != " + SQLUtil.toSQL(DeliveryIssuanceType.DELIVERY));
 
         lsSQL = MiscUtil.addCondition(lsSQL, "a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         ResultSet loRS = poGRider.executeQuery(lsSQL);

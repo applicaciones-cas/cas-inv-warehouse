@@ -219,8 +219,8 @@ public class Model_Cluster_Delivery_Master extends Model {
     }
 
     //dDepartre
-    public JSONObject setDepartreDate(Date TownId) {
-        return setValue("dDepartre", TownId);
+    public JSONObject setDepartreDate(Date departureDate) {
+        return setValue("dDepartre", departureDate);
     }
 
     public Date getDepartreDate() {
@@ -228,8 +228,8 @@ public class Model_Cluster_Delivery_Master extends Model {
     }
 
     //dArrivalx
-    public JSONObject setArrivalDate(Date TownId) {
-        return setValue("dArrivalx", TownId);
+    public JSONObject setArrivalDate(Date arrivalDate) {
+        return setValue("dArrivalx", arrivalDate);
     }
 
     public Date getArrivalDate() {

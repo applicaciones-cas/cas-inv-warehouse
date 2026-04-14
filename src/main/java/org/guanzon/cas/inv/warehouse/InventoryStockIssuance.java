@@ -667,9 +667,10 @@ public class InventoryStockIssuance extends Transaction {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
-        poGRider.beginTrans("UPDATE STATUS", "PostTransaction", SOURCE_CODE, getMaster().getTransactionNo());
-
+        
+        if (!pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "PostTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+        }
         poJSON = statusChange(poMaster.getTable(),
                 (String) poMaster.getValue("sTransNox"),
                 "PostTransaction",
@@ -680,8 +681,9 @@ public class InventoryStockIssuance extends Transaction {
             return poJSON;
         }
 
-        poGRider.commitTrans();
-
+        if (!pbWthParent) {
+            poGRider.commitTrans();
+        }
         openTransaction(getMaster().getTransactionNo());
         poJSON = new JSONObject();
         poJSON.put("result", "success");
