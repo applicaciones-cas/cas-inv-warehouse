@@ -154,6 +154,8 @@ public class StockRequest extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+
+                setApproving((String) poJSON.get("sUserIDxx"));
             } //needs authorization thru authorization matrix
             else {
                 //show process needs authorization through the authority matrix
@@ -206,7 +208,7 @@ public class StockRequest extends Transaction {
 
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-
+        String lsApproveID = "";
         String lsStatus = StockRequestStatus.CONFIRMED;
         boolean lbConfirm = true;
 
@@ -278,6 +280,7 @@ public class StockRequest extends Transaction {
 
                             //check if approving officer is authorized
                             String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                            setApproving((String) poJSON.get("sUserIDxx"));
                             //check if current user is authorized to approved this transaction
                             poJSON = check.authTrans((String) loJson.get("sAuthType"), poGRider.getUserID());
                             //user is not authorized
@@ -572,19 +575,14 @@ public class StockRequest extends Transaction {
                             return poJSON;
                         }
                     }
-                } //there are no authorization event request
-                else {
-                    //Replaced script above by calling of method Arsiela 10-15-2025 09:25:01
-                    poJSON = seekApproval();
-                    if ("error".equalsIgnoreCase((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
+
                 }
             }
         }
 
         //check  the user level again then if he/she allow to approve
-        poGRider.beginTrans("UPDATE STATUS", "Cancel Transaction", SOURCE_CODE, Master().getTransactionNo());
+        poGRider.beginTrans(
+                "UPDATE STATUS", "Cancel Transaction", SOURCE_CODE, Master().getTransactionNo());
         try {
             //kalyptus-2025.10.08 02:52pm
             //save to inventory ledger
@@ -594,7 +592,9 @@ public class StockRequest extends Transaction {
 
                 for (Model loDetail : paDetail) {
                     Model_Inv_Stock_Request_Detail detail = (Model_Inv_Stock_Request_Detail) loDetail;
-                    loTrans.addDetail((String) detail.getValue("sIndstCdx"), detail.getStockId(), "0", 0, detail.getQuantity(), detail.Inventory().getCost().doubleValue());
+                    if (!detail.getStockId().isEmpty()) {
+                        loTrans.addDetail((String) detail.getValue("sIndstCdx"), detail.getStockId(), "0", 0, detail.getQuantity(), detail.Inventory().getCost().doubleValue());
+                    }
                 }
                 loTrans.saveTransaction();
             }
@@ -1015,6 +1015,8 @@ public class StockRequest extends Transaction {
         if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
+
+                setApproving((String) poJSON.get("sUserIDxx"));
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 } else {
