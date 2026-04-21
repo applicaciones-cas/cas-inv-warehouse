@@ -154,6 +154,8 @@ public class StockRequest extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+
+                setApproving((String) poJSON.get("sUserIDxx"));
             } //needs authorization thru authorization matrix
             else {
                 //show process needs authorization through the authority matrix
@@ -206,7 +208,7 @@ public class StockRequest extends Transaction {
 
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-
+        String lsApproveID = "";
         String lsStatus = StockRequestStatus.CONFIRMED;
         boolean lbConfirm = true;
 
@@ -278,6 +280,7 @@ public class StockRequest extends Transaction {
 
                             //check if approving officer is authorized
                             String lsUserIDxx = poJSON.get("sUserIDxx").toString();
+                            setApproving((String) poJSON.get("sUserIDxx"));
                             //check if current user is authorized to approved this transaction
                             poJSON = check.authTrans((String) loJson.get("sAuthType"), poGRider.getUserID());
                             //user is not authorized
@@ -1012,6 +1015,8 @@ public class StockRequest extends Transaction {
         if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
+
+                setApproving((String) poJSON.get("sUserIDxx"));
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 } else {
