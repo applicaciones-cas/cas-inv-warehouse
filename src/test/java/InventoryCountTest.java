@@ -974,6 +974,7 @@ public class InventoryCountTest {
     @Order(54)
     void testAttachment_AddAndCount() throws SQLException, GuanzonException, CloneNotSupportedException {
         System.out.println("--- testAttachment_AddAndCount ---");
+        assertSuccess(poTrans.initTransaction(), "initTransaction");
         assertSuccess(poTrans.NewTransaction(), "NewTransaction");
         Assert.assertEquals(0, poTrans.getTransactionAttachmentCount());
         Assert.assertNotNull(poTrans.getAttachmentList());
