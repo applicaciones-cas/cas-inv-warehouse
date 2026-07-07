@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
+import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
 import net.sf.jasperreports.engine.JRException;
 import org.guanzon.appdriver.agent.ActionAuthManager;
@@ -624,7 +625,7 @@ public class InventoryStockIssuance extends Transaction {
                     return poJSON;
 
                 }
-            } catch (GuanzonException ex) {
+            } catch (GuanzonException | ScriptException ex) {
                 poJSON = new JSONObject();
 
                 poGRider.rollbackTrans();
@@ -632,7 +633,7 @@ public class InventoryStockIssuance extends Transaction {
                 poJSON.put("message", ex.getMessage());
                 return poJSON;
 
-            }
+            } 
         }
 
         poGRider.commitTrans();

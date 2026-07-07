@@ -18,6 +18,7 @@ import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import org.guanzon.cas.inv.warehouse.status.DeliveryScheduleStatus;
+import org.guanzon.cas.parameter.model.Model_Project;
 
 /**
  *
@@ -27,6 +28,7 @@ public class Model_Inventory_Transfer_Master extends Model {
 
     //reference objects
     Model_Industry poIndustry;
+    Model_Project poProject;
     Model_Company poCompany;
     Model_Branch poBranch;
     Model_Branch poBranchDestination;
@@ -105,6 +107,7 @@ public class Model_Inventory_Transfer_Master extends Model {
     //cStockNew
     //cDelivrTp
     //cTranStat
+    //sProjCode added change BR 07-02-2026
 
     //sTransNox
     public JSONObject setTransactionNo(String transactionNo) {
@@ -149,6 +152,15 @@ public class Model_Inventory_Transfer_Master extends Model {
 
     public String getCategoryId() {
         return (String) getValue("sCategrCd");
+    }
+
+    //sProjCode
+    public JSONObject setProjectCode(String projectCode) {
+        return setValue("sProjCode", projectCode);
+    }
+
+    public String getProjectCode() {
+        return (String) getValue("sProjCode");
     }
 
     //dTransact
@@ -433,4 +445,20 @@ public class Model_Inventory_Transfer_Master extends Model {
         return this.poIndustry;
     }
 
+    public Model_Project Project() throws SQLException, GuanzonException {
+        if (!"".equals(getValue("sProjCode"))) {
+            if (this.poProject.getEditMode() == 1 && this.poProject
+                    .getProjectID().equals(getValue("sProjCode"))) {
+                return this.poProject;
+            }
+            this.poJSON = this.poProject.openRecord((String) getValue("sProjCode"));
+            if ("success".equals(this.poJSON.get("result"))) {
+                return this.poProject;
+            }
+            this.poProject.initialize();
+            return this.poProject;
+        }
+        this.poProject.initialize();
+        return this.poProject;
+    }
 }
