@@ -29,6 +29,7 @@ import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
+import org.guanzon.cas.inv.InvTransCons;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.services.ParamModels;
@@ -70,6 +71,16 @@ public class InventoryStockIssuanceNeo extends Transaction {
     public List<Model> paDetailExpiration;
     public Journal poJournal;
     private String psApprover = "";
+    private boolean pbIsConfirmation = false;
+    private boolean pbIsPosting = false;
+
+    public void setIsConfirmationForm(boolean isConfirmation) {
+        this.pbIsConfirmation = isConfirmation;
+    }
+
+    public void setIsPostingForm(boolean isConfirmation) {
+        this.pbIsPosting = isConfirmation;
+    }
 
     public void setIndustryID(String industryId) {
         psIndustryCode = industryId;
@@ -2425,7 +2436,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
                     break;
             }
         } else {
-            if ((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() != EditMode.ADDNEW) {
+            if ((getEditMode() == EditMode.READY && pbIsConfirmation) && poJournal.getEditMode() != EditMode.ADDNEW) {
                 poJSON = poJournal.NewTransaction();
                 if (!isJSONSuccess(poJSON, "", "")) {
                     return poJSON;
@@ -2451,9 +2462,30 @@ public class InventoryStockIssuanceNeo extends Transaction {
 
                 jsondetail = new JSONObject();
                 jsondetail.put("Inv_Transfer_Master", jsonmaster);
-                jsondetail.put("Inv_Transfer_Master", jsondetails);
+                jsondetail.put("Inv_Transfer_Detail", jsondetails);
 
-                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE, getMaster().getIndustryId(), "");
+                TBJTransaction tbj = null;
+
+                //seperate tbj base on UI different auto creation
+                if (isSameCompany()) {
+                    if (pbIsConfirmation) {
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER, getMaster().getIndustryId(), psCategorCD);
+                    } else if (pbIsPosting) {
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE, getMaster().getIndustryId(), psCategorCD);
+                    }
+                } else {
+                    //for confirmation to maam she/ sir mac paano pag same source diffent code
+                    if (pbIsConfirmation) {
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER , getMaster().getIndustryId(), psCategorCD);
+                    } else if (pbIsPosting) {
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE, getMaster().getIndustryId(), psCategorCD);
+                    }
+                }
+
+                if (tbj == null) {
+                    poJSON.put("result", "error");
+                    return poJSON;
+                }
                 tbj.setGRiderCAS(poGRider);
                 tbj.setData(jsondetail);
                 jsonmaster = tbj.processRequest();
@@ -2530,6 +2562,13 @@ public class InventoryStockIssuanceNeo extends Transaction {
         MiscUtil.close(loRS);
 
         return "";
+    }
+
+    public boolean isSameCompany() throws SQLException, GuanzonException {
+        if (getMaster().getBranchCode().isEmpty() || getMaster().getDestination().isEmpty()) {
+            return false;
+        }
+        return getMaster().Branch().getCompanyId() == getMaster().BranchDestination().getCompanyId();
     }
 
     /**
