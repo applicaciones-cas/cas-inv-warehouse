@@ -538,6 +538,8 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 }
             }
         }
+
+        //Journal Auto CREATE SAVING
         poJSON = populateJournal();
         if ("success".equals((String) poJSON.get("result"))) {
             if (poJournal != null) {
@@ -547,6 +549,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
                     if ("error".equals((String) poJSON.get("result"))) {
                         poJSON.put("result", "error");
                         poJSON.put("message", poJSON.get("message").toString());
+                        if (!pbWthParent) {
+                            poGRider.rollbackTrans();
+                        }
                         return poJSON;
                     }
                     if (lbContinue) {
@@ -557,6 +562,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
                         poJSON = poJournal.SaveTransaction();
                         if ("error".equals((String) poJSON.get("result"))) {
                             System.out.println("Save Journal : " + poJSON.get("message"));
+                            if (!pbWthParent) {
+                                poGRider.rollbackTrans();
+                            }
                             return poJSON;
                         }
                     }
@@ -615,7 +623,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         return poJSON;
     }
 
-    public JSONObject PostTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject PostTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         if (getEditMode() != EditMode.UPDATE) {
@@ -863,6 +871,38 @@ public class InventoryStockIssuanceNeo extends Transaction {
             }
         }
 
+        //Journal Auto CREATE SAVING
+        poJSON = populateJournal();
+        if ("success".equals((String) poJSON.get("result"))) {
+            if (poJournal != null) {
+                if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
+                    poJSON = validateJournal();
+                    boolean lbContinue = (boolean) poJSON.get("continue");
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", poJSON.get("message").toString());
+                        if (!pbWthParent) {
+                            poGRider.rollbackTrans();
+                        }
+                        return poJSON;
+                    }
+                    if (lbContinue) {
+                        poJournal.Master().setSourceNo(getMaster().getTransactionNo());
+                        poJournal.Master().setModifyingId(poGRider.getUserID());
+                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                        poJournal.setWithParent(true);
+                        poJSON = poJournal.SaveTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Journal : " + poJSON.get("message"));
+                            if (!pbWthParent) {
+                                poGRider.rollbackTrans();
+                            }
+                            return poJSON;
+                        }
+                    }
+                }
+            }
+        }
         if (!pbWthParent) {
             poGRider.commitTrans();
         }
@@ -2411,7 +2451,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
         }
 
-        if (poJournal == null || getEditMode() == EditMode.READY) {
+        if (poJournal == null || getEditMode() == EditMode.READY || getEditMode() == EditMode.UPDATE) {
             poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
             poJournal.InitTransaction();
         }
@@ -2436,7 +2476,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
                     break;
             }
         } else {
-            if ((getEditMode() == EditMode.READY && pbIsConfirmation) && poJournal.getEditMode() != EditMode.ADDNEW) {
+            if (getEditMode() != EditMode.UNKNOWN && poJournal.getEditMode() != EditMode.ADDNEW) {
                 poJSON = poJournal.NewTransaction();
                 if (!isJSONSuccess(poJSON, "", "")) {
                     return poJSON;
@@ -2468,17 +2508,18 @@ public class InventoryStockIssuanceNeo extends Transaction {
 
                 //seperate tbj base on UI different auto creation
                 if (isSameCompany()) {
-                    if (pbIsConfirmation) {
-                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER, getMaster().getIndustryId(), psCategorCD);
-                    } else if (pbIsPosting) {
+                    if (pbIsPosting) {
                         tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE, getMaster().getIndustryId(), psCategorCD);
+                    } else {//entry form can create due to closetransaction / confirmation/printing is allowed
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER, getMaster().getIndustryId(), psCategorCD);
                     }
                 } else {
                     //for confirmation to maam she/ sir mac paano pag same source diffent code
-                    if (pbIsConfirmation) {
-                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER , getMaster().getIndustryId(), psCategorCD);
-                    } else if (pbIsPosting) {
+                    if (pbIsPosting) {
                         tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE, getMaster().getIndustryId(), psCategorCD);
+                    } else {//entry form can create due to closetransaction / confirmation/printing is allowed
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER, getMaster().getIndustryId(), psCategorCD);
+
                     }
                 }
 
@@ -2513,7 +2554,11 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 poJournal.Master().setDepartmentId(poGRider.getDepartment());
                 poJournal.Master().setTransactionDate(poGRider.getServerDate());
                 poJournal.Master().setCompanyId(psCompanyID);
-                poJournal.Master().setSourceCode(getSourceCode());
+                if (pbIsPosting) {
+                    poJournal.Master().setSourceCode(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE);
+                } else {
+                    poJournal.Master().setSourceCode(InvTransCons.BRANCH_TRANSFER);
+                }
                 poJournal.Master().setSourceNo(getMaster().getTransactionNo());
 
             } else if ((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
@@ -2543,8 +2588,13 @@ public class InventoryStockIssuanceNeo extends Transaction {
         String lsSQL = MiscUtil.makeSelect(loMaster);
         lsSQL = MiscUtil.addCondition(lsSQL,
                 " sSourceNo = " + SQLUtil.toSQL(getMaster().getTransactionNo())
-                + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
         );
+        //entry / confirmation is same 
+        if (pbIsPosting) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "sSourceCD = " + SQLUtil.toSQL(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE));
+        } else {
+            lsSQL = MiscUtil.addCondition(lsSQL, "sSourceCD = " + SQLUtil.toSQL(InvTransCons.BRANCH_TRANSFER));
+        }
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         poJSON = new JSONObject();
@@ -2565,10 +2615,10 @@ public class InventoryStockIssuanceNeo extends Transaction {
     }
 
     public boolean isSameCompany() throws SQLException, GuanzonException {
-        if (getMaster().getBranchCode().isEmpty() || getMaster().getDestination().isEmpty()) {
+        if (getMaster().getBranchCode().isEmpty() && getMaster().getDestination().isEmpty()) {
             return false;
         }
-        return getMaster().Branch().getCompanyId() == getMaster().BranchDestination().getCompanyId();
+        return getMaster().Branch().getCompanyId().equals(getMaster().BranchDestination().getCompanyId());
     }
 
     /**
@@ -2589,7 +2639,9 @@ public class InventoryStockIssuanceNeo extends Transaction {
             if (poJournal.Detail(lnCtr).isReverse()) { //Added by Arsiela 05-16-2026 04:24PM
                 ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
                 ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
-
+                if (poJournal.Detail(lnCtr).getAccountCode() == null || poJournal.Detail(lnCtr).getAccountCode().isEmpty()) {
+                    continue;
+                }
                 if (poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 || poJournal.Detail(lnCtr).getDebitAmount() > 0.0000) {
                     if (poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())) {
                         if (poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))) {
@@ -2627,11 +2679,11 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 return poJSON;
             }
 
-            if (ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Debit should be equal to credit amount.");
-                return poJSON;
-            }
+//            if (ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Debit should be equal to credit amount.");
+//                return poJSON;
+//            }
         }
 
         poJSON.put("result", "sucess");

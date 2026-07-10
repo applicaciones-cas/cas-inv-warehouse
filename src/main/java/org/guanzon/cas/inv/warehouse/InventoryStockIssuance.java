@@ -126,6 +126,8 @@ public class InventoryStockIssuance extends Transaction {
                 loDetail.InventoryTransfer().getMaster().setCategoryId(psCategoryCD);
                 loDetail.InventoryTransfer().getMaster().setIndustryId(psIndustryCode);
                 loDetail.InventoryTransfer().setIndustryID(psIndustryCode);
+                loDetail.InventoryTransfer().setCategoryID(psCategoryCD);
+                loDetail.InventoryTransfer().setCompanyID(psCompanyID);
 //                //keep getting nextcode avoid conflict to other
 //                if (loDetail.InventoryTransfer().getEditMode() == EditMode.ADDNEW) {
 ////                    loDetail.InventoryTransfer().getMaster().getNextCode();
@@ -424,6 +426,7 @@ public class InventoryStockIssuance extends Transaction {
         System.out.println(getDetail(deliveryNo).InventoryTransfer().getMaster().getTransactionNo());
         poGRider.beginTrans("SAVE STATUS", "SaveTransaction", SOURCE_CODE, getMaster().getTransactionNo());
         getDetail(deliveryNo).InventoryTransfer().setWithParent(true);
+        computeTotal(deliveryNo);
         poJSON = getDetail(deliveryNo).InventoryTransfer().SaveTransaction();
         if ("error".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
@@ -441,6 +444,16 @@ public class InventoryStockIssuance extends Transaction {
         }
 
         return poJSON;
+    }
+
+    private void computeTotal(int deliveryNo) throws SQLException, GuanzonException, CloneNotSupportedException {
+        double lnDetailTotal = 0.0d;
+        for (Model_Inventory_Transfer_Detail loDetail : getDetail(deliveryNo).InventoryTransfer().getDetailList()) {
+            lnDetailTotal = lnDetailTotal + (loDetail.getInventoryCost() * loDetail.getQuantity());
+
+        }
+        double lnTotalAmount = lnDetailTotal;
+        getDetail(deliveryNo).InventoryTransfer().getMaster().setTransactionTotal(lnTotalAmount);
     }
 
     public JSONObject CancelTransactionDelivery(int deliveryNo) throws SQLException, GuanzonException, CloneNotSupportedException {
@@ -633,7 +646,7 @@ public class InventoryStockIssuance extends Transaction {
                 poJSON.put("message", ex.getMessage());
                 return poJSON;
 
-            } 
+            }
         }
 
         poGRider.commitTrans();

@@ -66,6 +66,7 @@ public class Model_Inventory_Transfer_Master extends Model {
             this.poCompany = (new ParamModels(this.poGRider)).Company();
             this.poIndustry = (new ParamModels(this.poGRider)).Industry();
             this.poCategory = (new ParamModels(this.poGRider)).Category();
+            this.poProject = (new ParamModels(this.poGRider)).Project();
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();

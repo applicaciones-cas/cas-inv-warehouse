@@ -129,11 +129,11 @@ public class InventoryStockClusterIssuance_Vehicle implements GValidator {
             poJSON.put("message", "Branch is not set.");
             return poJSON;
         }
-        if (poMaster.getSerialId() == null || poMaster.getSerialId().isEmpty()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Serial is not set.");
-            return poJSON;
-        }
+//        if (poMaster.getSerialId() == null || poMaster.getSerialId().isEmpty()) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Serial is not set.");
+//            return poJSON;
+//        }
         if (poMaster.getDriverID() == null || poMaster.getDriverID().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Driver is not set.");
