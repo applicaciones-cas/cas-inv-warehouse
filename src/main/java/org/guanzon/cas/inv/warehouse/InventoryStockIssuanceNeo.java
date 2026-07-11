@@ -1960,12 +1960,13 @@ public class InventoryStockIssuanceNeo extends Transaction {
         poReportJasper.addParameter(
                 "BranchName", poGRider.getBranchName());
         poReportJasper.addParameter("Address", poGRider.getAddress());
-        poReportJasper.addParameter("CompanyName", poGRider.getClientName());
+        poReportJasper.addParameter("CompanyName", getMaster().Company().getCompanyName());
         poReportJasper.addParameter("TransactionNo", getMaster().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(getMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", getMaster().getRemarks());
         poReportJasper.addParameter("Destination", getMaster().BranchDestination().getBranchName());
         poReportJasper.addParameter("Trucking", getMaster().TruckingCompany().getCompanyName());
+        poReportJasper.addParameter("ProjectCode", getMaster().Project().getProjectDescription() == null ? "" : getMaster().Project().getProjectDescription());
         poReportJasper.addParameter("DatePrinted", SQLUtil.dateFormat(poGRider.getServerDate(), SQLUtil.FORMAT_TIMESTAMP));
         if (getMaster()
                 .isPrintedStatus()) {
@@ -1974,11 +1975,49 @@ public class InventoryStockIssuanceNeo extends Transaction {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\blank.png");
         }
 
-        poReportJasper.setReportName("Inventory Issuance");
+        JSONObject loJSON = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+
+        if ("success".equals((String) loJSON.get("result"))) {
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        String lsPreparedBy = entryBy;
+        String lsPreparedByDate = entryDate;
+        String lsConfirmedBy = "";
+        String lsConfirmedDate = "";
+
+        String lsSQL = " SELECT sModified, dModified "
+                + " FROM Transaction_Status_History "
+                + " WHERE sTableNme ='Inv_Transfer_Master' "
+                + " AND cRefrStat = '1' AND cTranStat = '1' ORDER BY dModified DESC";
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo =  " + SQLUtil.toSQL(getMaster().getTransactionNo()));
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                    lsConfirmedBy = poGRider.Decrypt(getMaster().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(getMaster().getModifyingId()));
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsConfirmedDate = dModified.format(formatter);
+                }
+            }
+        }
+
+        MiscUtil.close(loRS);
+
+        poReportJasper.addParameter("PrepNme", lsPreparedBy + " - " + lsPreparedByDate);
+        poReportJasper.addParameter("ConfirmNme", lsConfirmedBy + " - " + lsConfirmedDate);
+        poReportJasper.addParameter("ReceivrNme", "");
+
+        poReportJasper.setReportName("Inter-Branch Stock Transfer");
         poReportJasper.setJasperPath(InventoryStockIssuancePrint.getJasperReport(psIndustryCode));
 
         //process by ResultSet
-        String lsSQL = InventoryStockIssuancePrint.PrintRecordQuery();
+        lsSQL = InventoryStockIssuancePrint.PrintRecordQuery();
         lsSQL = MiscUtil.addCondition(lsSQL, "InventoryTransferMaster.sTransNox = " + SQLUtil.toSQL(getMaster().getTransactionNo()));
 
         poReportJasper.setSQLReport(lsSQL);

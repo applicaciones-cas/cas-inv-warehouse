@@ -13,13 +13,13 @@ import org.guanzon.appdriver.base.SQLUtil;
  */
 public class InventoryStockIssuancePrint {
 
-    public static final String MOBILE_PHONE_REPORT = "InventoryIssuanceMP";
-    public static final String MOTORCYCLE_REPORT = "InventoryIssuanceMC";
-    public static final String CAR_REPORT = "InventoryIssuanceCar";
-    public static final String HOSPITALITY_REPORT = "InventoryIssuanceMonarch";
-    public static final String LOS_PEDRITOS_REPORT = "InventoryIssuanceLP";
-    public static final String GENERAL_REPORT = "InventoryIssuance";
-    public static final String APPLIANCE_REPORT = "InventoryIssuanceAppliance";
+    public static final String MOBILE_PHONE_REPORT = "InventoryIssuanceInterBranch";
+    public static final String MOTORCYCLE_REPORT = "InventoryIssuanceInterBranch";
+    public static final String CAR_REPORT = "InventoryIssuanceInterBranch";
+    public static final String HOSPITALITY_REPORT = "InventoryIssuanceInterBranch";
+    public static final String LOS_PEDRITOS_REPORT = "InventoryIssuanceInterBranch";
+    public static final String GENERAL_REPORT = "InventoryIssuanceInterBranch";
+    public static final String APPLIANCE_REPORT = "InventoryIssuanceInterBranch";
 
     public static final String PrintRecordQuery() {
         String lsSQL = "SELECT "
