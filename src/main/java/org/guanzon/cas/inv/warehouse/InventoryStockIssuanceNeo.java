@@ -2,6 +2,7 @@ package org.guanzon.cas.inv.warehouse;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -9,8 +10,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import javafx.application.Platform;
+import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
 import net.sf.jasperreports.engine.JRException;
 import org.guanzon.appdriver.agent.ActionAuthManager;
@@ -28,6 +29,7 @@ import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
+import org.guanzon.cas.inv.InvTransCons;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.services.ParamModels;
@@ -45,7 +47,18 @@ import org.guanzon.cas.inv.warehouse.report.ReportUtilListener;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceControllers;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceModels;
 import org.guanzon.cas.inv.warehouse.validators.InventoryIssuanceValidatorFactory;
+import org.guanzon.cas.parameter.Project;
+import org.guanzon.cas.parameter.model.Model_Project;
+import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.tbjhandler.TBJEntry;
+import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
+import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.Journal;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class InventoryStockIssuanceNeo extends Transaction {
 
@@ -56,6 +69,18 @@ public class InventoryStockIssuanceNeo extends Transaction {
     private List<Model> paMaster;
     public Model poDetailExpiration;
     public List<Model> paDetailExpiration;
+    public Journal poJournal;
+    private String psApprover = "";
+    private boolean pbIsConfirmation = false;
+    private boolean pbIsPosting = false;
+
+    public void setIsConfirmationForm(boolean isConfirmation) {
+        this.pbIsConfirmation = isConfirmation;
+    }
+
+    public void setIsPostingForm(boolean isConfirmation) {
+        this.pbIsPosting = isConfirmation;
+    }
 
     public void setIndustryID(String industryId) {
         psIndustryCode = industryId;
@@ -164,11 +189,18 @@ public class InventoryStockIssuanceNeo extends Transaction {
         poMaster = new DeliveryIssuanceModels(poGRider).InventoryTransferMaster();
         poDetail = new DeliveryIssuanceModels(poGRider).InventoryTransferDetail();
         poDetailExpiration = new DeliveryIssuanceModels(poGRider).InventoryTransferDetailExpiration();
+        poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
         paMaster = new ArrayList<Model>();
         paDetail = new ArrayList<Model>();
+
         initSQL();
 
         return super.initialize();
+    }
+
+    @Override
+    public String getSourceCode() {
+        return SOURCE_CODE;
     }
 
     @Override
@@ -311,7 +343,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         return poJSON;
     }
 
-    public JSONObject CloseTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject CloseTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         if (getEditMode() != EditMode.READY) {
@@ -507,6 +539,38 @@ public class InventoryStockIssuanceNeo extends Transaction {
             }
         }
 
+        //Journal Auto CREATE SAVING
+        poJSON = populateJournal();
+        if ("success".equals((String) poJSON.get("result"))) {
+            if (poJournal != null) {
+                if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
+                    poJSON = validateJournal();
+                    boolean lbContinue = (boolean) poJSON.get("continue");
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", poJSON.get("message").toString());
+                        if (!pbWthParent) {
+                            poGRider.rollbackTrans();
+                        }
+                        return poJSON;
+                    }
+                    if (lbContinue) {
+                        poJournal.Master().setSourceNo(getMaster().getTransactionNo());
+                        poJournal.Master().setModifyingId(poGRider.getUserID());
+                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                        poJournal.setWithParent(true);
+                        poJSON = poJournal.SaveTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Journal : " + poJSON.get("message"));
+                            if (!pbWthParent) {
+                                poGRider.rollbackTrans();
+                            }
+                            return poJSON;
+                        }
+                    }
+                }
+            }
+        }
         if (!pbWthParent) {
             poGRider.commitTrans();
         }
@@ -559,7 +623,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         return poJSON;
     }
 
-    public JSONObject PostTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject PostTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         if (getEditMode() != EditMode.UPDATE) {
@@ -807,6 +871,38 @@ public class InventoryStockIssuanceNeo extends Transaction {
             }
         }
 
+        //Journal Auto CREATE SAVING
+        poJSON = populateJournal();
+        if ("success".equals((String) poJSON.get("result"))) {
+            if (poJournal != null) {
+                if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
+                    poJSON = validateJournal();
+                    boolean lbContinue = (boolean) poJSON.get("continue");
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", poJSON.get("message").toString());
+                        if (!pbWthParent) {
+                            poGRider.rollbackTrans();
+                        }
+                        return poJSON;
+                    }
+                    if (lbContinue) {
+                        poJournal.Master().setSourceNo(getMaster().getTransactionNo());
+                        poJournal.Master().setModifyingId(poGRider.getUserID());
+                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                        poJournal.setWithParent(true);
+                        poJSON = poJournal.SaveTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Journal : " + poJSON.get("message"));
+                            if (!pbWthParent) {
+                                poGRider.rollbackTrans();
+                            }
+                            return poJSON;
+                        }
+                    }
+                }
+            }
+        }
         if (!pbWthParent) {
             poGRider.commitTrans();
         }
@@ -1213,6 +1309,8 @@ public class InventoryStockIssuanceNeo extends Transaction {
         }
         loBrowse.setCategoryFilters(psCategorCD);
         loBrowse.setBranch(poGRider.getBranchCode());
+        //allow negative quantity NEW BR 07-2026
+        loBrowse.isWithQuantityStock(false);
 
         poJSON = new JSONObject();
 
@@ -1262,6 +1360,8 @@ public class InventoryStockIssuanceNeo extends Transaction {
         }
         loBrowse.setCategoryFilters(psCategorCD);
         loBrowse.setBranch(poGRider.getBranchCode());
+        //allow negative quantity NEW BR 07-2026
+        loBrowse.isWithQuantityStock(false);
 
         poJSON = new JSONObject();
 
@@ -1311,6 +1411,8 @@ public class InventoryStockIssuanceNeo extends Transaction {
         }
         loBrowse.setCategoryFilters(psCategorCD);
         loBrowse.setBranch(poGRider.getBranchCode());
+        //allow negative quantity NEW BR 07-2026
+        loBrowse.isWithQuantityStock(false);
 
         poJSON = new JSONObject();
 
@@ -1360,6 +1462,8 @@ public class InventoryStockIssuanceNeo extends Transaction {
             loBrowse.setIndustry(psIndustryCode);
         }
         loBrowse.setCategoryFilters(psCategorCD);
+        //allow negative quantity NEW BR 07-2026
+        loBrowse.isWithQuantityStock(false);
 
         poJSON = new JSONObject();
 
@@ -1395,6 +1499,30 @@ public class InventoryStockIssuanceNeo extends Transaction {
 
             if ("success".equals((String) poJSON.get("result"))) {
                 getMaster().setDestination(loBrowse.getBranchCode());
+
+                poJSON = new JSONObject();
+                poJSON.put("result", "success");
+                return poJSON;
+            }
+
+        }
+        this.poJSON = new JSONObject();
+        this.poJSON.put("result", "error");
+        this.poJSON.put("message", "No record loaded.");
+        return this.poJSON;
+
+    }
+
+    public JSONObject searchTransactionProject(String value, boolean byCode) throws SQLException, GuanzonException {
+        Project loBrowse = new ParamControllers(poGRider, null).Project();
+        loBrowse.setWithParentClass(true);
+        loBrowse.setRecordStatus("1");
+
+        poJSON = loBrowse.searchRecord(value, false);
+
+        if (poJSON != null) {
+            if ("success".equals((String) poJSON.get("result"))) {
+                getMaster().setProjectCode(loBrowse.getModel().getProjectID());
 
                 poJSON = new JSONObject();
                 poJSON.put("result", "success");
@@ -1801,7 +1929,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
                     }
                     poReportJasper.CloseReportUtil();
 
-                } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
+                } catch (SQLException | GuanzonException | CloneNotSupportedException | ScriptException ex) {
                     Logger.getLogger(InventoryRequestApproval.class
                             .getName()).log(Level.SEVERE, null, ex);
                     ShowMessageFX.Error("", "", ex.getMessage());
@@ -1832,12 +1960,13 @@ public class InventoryStockIssuanceNeo extends Transaction {
         poReportJasper.addParameter(
                 "BranchName", poGRider.getBranchName());
         poReportJasper.addParameter("Address", poGRider.getAddress());
-        poReportJasper.addParameter("CompanyName", poGRider.getClientName());
+        poReportJasper.addParameter("CompanyName", getMaster().Company().getCompanyName());
         poReportJasper.addParameter("TransactionNo", getMaster().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(getMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", getMaster().getRemarks());
         poReportJasper.addParameter("Destination", getMaster().BranchDestination().getBranchName());
         poReportJasper.addParameter("Trucking", getMaster().TruckingCompany().getCompanyName());
+        poReportJasper.addParameter("ProjectCode", getMaster().Project().getProjectDescription() == null ? "" : getMaster().Project().getProjectDescription());
         poReportJasper.addParameter("DatePrinted", SQLUtil.dateFormat(poGRider.getServerDate(), SQLUtil.FORMAT_TIMESTAMP));
         if (getMaster()
                 .isPrintedStatus()) {
@@ -1846,11 +1975,49 @@ public class InventoryStockIssuanceNeo extends Transaction {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\blank.png");
         }
 
-        poReportJasper.setReportName("Inventory Issuance");
+        JSONObject loJSON = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+
+        if ("success".equals((String) loJSON.get("result"))) {
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        String lsPreparedBy = entryBy;
+        String lsPreparedByDate = entryDate;
+        String lsConfirmedBy = "";
+        String lsConfirmedDate = "";
+
+        String lsSQL = " SELECT sModified, dModified "
+                + " FROM Transaction_Status_History "
+                + " WHERE sTableNme ='Inv_Transfer_Master' "
+                + " AND cRefrStat = '1' AND cTranStat = '1' ORDER BY dModified DESC";
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo =  " + SQLUtil.toSQL(getMaster().getTransactionNo()));
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                    lsConfirmedBy = poGRider.Decrypt(getMaster().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(getMaster().getModifyingId()));
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsConfirmedDate = dModified.format(formatter);
+                }
+            }
+        }
+
+        MiscUtil.close(loRS);
+
+        poReportJasper.addParameter("PrepNme", lsPreparedBy + " - " + lsPreparedByDate);
+        poReportJasper.addParameter("ConfirmNme", lsConfirmedBy + " - " + lsConfirmedDate);
+        poReportJasper.addParameter("ReceivrNme", "");
+
+        poReportJasper.setReportName("Inter-Branch Stock Transfer");
         poReportJasper.setJasperPath(InventoryStockIssuancePrint.getJasperReport(psIndustryCode));
 
         //process by ResultSet
-        String lsSQL = InventoryStockIssuancePrint.PrintRecordQuery();
+        lsSQL = InventoryStockIssuancePrint.PrintRecordQuery();
         lsSQL = MiscUtil.addCondition(lsSQL, "InventoryTransferMaster.sTransNox = " + SQLUtil.toSQL(getMaster().getTransactionNo()));
 
         poReportJasper.setSQLReport(lsSQL);
@@ -2187,4 +2354,381 @@ public class InventoryStockIssuanceNeo extends Transaction {
         }
         return lsEntry;
     }
+
+    //JOURNAL ENTRY CODE 07062026
+    private static String xsDateShort(Date fdValue) {
+        if (fdValue == null) {
+            return "1900-01-01";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
+    }
+
+    private JSONObject setJSON(String fsResult, String fsMessage) {
+        JSONObject loJSON = new JSONObject();
+        loJSON.put("result", fsResult);
+        loJSON.put("message", fsMessage);
+        return loJSON;
+    }
+
+    public Journal Journal() {
+        try {
+            if (poJournal == null) {
+                poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+                poJournal.InitTransaction();
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+        return poJournal;
+    }
+
+    public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsJournal = existJournal();
+        if (lsJournal != null && !"".equals(lsJournal)) {
+            poJournal.setWithParent(true);
+            poJournal.setWithUI(false);
+            if (psApprover == null || "".equals(psApprover)) {
+                psApprover = poGRider.getUserID();
+            }
+            poJournal.setApproving(psApprover);
+            //Update Journal
+            switch (fsStatus) {
+                case InventoryStockIssuanceStatus.CONFIRMED:
+                    //Confirm Journal
+                    poJSON = poJournal.ConfirmTransaction("");
+                    if (!isJSONSuccess(poJSON, "", "")) {
+                        return poJSON;
+                    }
+                    break;
+                case InventoryStockIssuanceStatus.VOID:
+                    //Void Journal
+                    poJSON = poJournal.VoidTransaction("");
+                    if (!isJSONSuccess(poJSON, "", "")) {
+                        return poJSON;
+                    }
+
+                    break;
+                case InventoryStockIssuanceStatus.CANCELLED:
+                    //Cancel Journal
+                    poJSON = poJournal.CancelTransaction("");
+                    if (!isJSONSuccess(poJSON, "", "")) {
+                        return poJSON;
+                    }
+                    break;
+            }
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+
+    public void resetJournal() {
+        try {
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(InventoryStockIssuance.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
+     * Refines and validates the journal detail list: prunes rows with no
+     * account code (or ADDNEW rows with zero debit/credit), and appends a fresh
+     * blank row when the last one has been filled in.
+     *
+     * @throws CloneNotSupportedException If an error occurs while adding a new
+     * detail row.
+     * @throws SQLException
+     */
+    public void ReloadJournal() throws CloneNotSupportedException, SQLException {
+        int lnCtr = Journal().getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
+                Journal().Detail().remove(lnCtr);
+            } else {
+                if (Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW) {
+                    if (Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
+                            && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000) {
+                        Journal().Detail().remove(lnCtr);
+                    }
+                }
+            }
+            lnCtr--;
+        }
+        if ((Journal().getDetailCount() - 1) >= 0) {
+            if (Journal().Detail(Journal().getDetailCount() - 1).getAccountCode() != null
+                    && !"".equals(Journal().Detail(Journal().getDetailCount() - 1).getAccountCode())
+                    && (Journal().Detail(Journal().getDetailCount() - 1).getDebitAmount() > 0.0000
+                    || Journal().Detail(Journal().getDetailCount() - 1).getCreditAmount() > 0.0000)) {
+                Journal().AddDetail();
+                Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            }
+        }
+        if ((Journal().getDetailCount() - 1) < 0) {
+            Journal().AddDetail();
+            Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+        }
+    }
+
+    /**
+     * Populate Journal information
+     *
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ScriptException
+     */
+    public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        if (getEditMode() == EditMode.UNKNOWN || getMaster().getEditMode() == EditMode.UNKNOWN) {
+            poJSON = setJSON("error", "No record to load");
+            return poJSON;
+        }
+
+        if (poJournal == null || getEditMode() == EditMode.READY || getEditMode() == EditMode.UPDATE) {
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        }
+
+        String lsJournal = existJournal();
+        if (lsJournal != null && !"".equals(lsJournal)) {
+            switch (getEditMode()) {
+                case EditMode.READY:
+                    poJSON = poJournal.OpenTransaction(lsJournal);
+                    if (!isJSONSuccess(poJSON, "", "")) {
+                        return poJSON;
+                    }
+                    break;
+                case EditMode.UPDATE:
+                    if (poJournal.getEditMode() == EditMode.READY || poJournal.getEditMode() == EditMode.UNKNOWN) {
+                        poJSON = poJournal.OpenTransaction(lsJournal);
+                        if (!isJSONSuccess(poJSON, "", "")) {
+                            return poJSON;
+                        }
+                        poJournal.UpdateTransaction();
+                    }
+                    break;
+            }
+        } else {
+            if (getEditMode() != EditMode.UNKNOWN && poJournal.getEditMode() != EditMode.ADDNEW) {
+                poJSON = poJournal.NewTransaction();
+                if (!isJSONSuccess(poJSON, "", "")) {
+                    return poJSON;
+                }
+
+                //retreiving using column index
+                JSONObject jsonmaster = new JSONObject();
+                for (int lnCtr = 1; lnCtr <= getMaster().getColumnCount(); lnCtr++) {
+                    System.out.println(getMaster().getColumn(lnCtr) + " ->> " + getMaster().getValue(lnCtr));
+                    jsonmaster.put(getMaster().getColumn(lnCtr), getMaster().getValue(lnCtr));
+                }
+
+                JSONArray jsondetails = new JSONArray();
+                JSONObject jsondetail = new JSONObject();
+                for (int lnCtr = 1; lnCtr <= Detail().size(); lnCtr++) {
+                    jsondetail = new JSONObject();
+                    for (int lnCol = 1; lnCol <= getDetail(lnCtr).getColumnCount(); lnCol++) {
+                        System.out.println(getDetail(lnCtr).getColumn(lnCol) + " ->> " + getDetail(lnCtr).getValue(lnCol));
+                        jsondetail.put(getDetail(lnCtr).getColumn(lnCol), getDetail(lnCtr).getValue(lnCol));
+                    }
+                    jsondetails.add(jsondetail);
+                }
+
+                jsondetail = new JSONObject();
+                jsondetail.put("Inv_Transfer_Master", jsonmaster);
+                jsondetail.put("Inv_Transfer_Detail", jsondetails);
+
+                TBJTransaction tbj = null;
+
+                //seperate tbj base on UI different auto creation
+                if (isSameCompany()) {
+                    if (pbIsPosting) {
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE, getMaster().getIndustryId(), psCategorCD);
+                    } else {//entry form can create due to closetransaction / confirmation/printing is allowed
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER, getMaster().getIndustryId(), psCategorCD);
+                    }
+                } else {
+                    //for confirmation to maam she/ sir mac paano pag same source diffent code
+                    if (pbIsPosting) {
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE, getMaster().getIndustryId(), psCategorCD);
+                    } else {//entry form can create due to closetransaction / confirmation/printing is allowed
+                        tbj = new TBJTransaction(InvTransCons.BRANCH_TRANSFER, getMaster().getIndustryId(), psCategorCD);
+
+                    }
+                }
+
+                if (tbj == null) {
+                    poJSON.put("result", "error");
+                    return poJSON;
+                }
+                tbj.setGRiderCAS(poGRider);
+                tbj.setData(jsondetail);
+                jsonmaster = tbj.processRequest();
+
+                if (jsonmaster.get("result").toString().equalsIgnoreCase("success")) {
+                    List<TBJEntry> xlist = tbj.getJournalEntries();
+                    for (TBJEntry xlist1 : xlist) {
+                        System.out.println("Account:" + xlist1.getAccount());
+                        System.out.println("Debit:" + xlist1.getDebit());
+                        System.out.println("Credit:" + xlist1.getCredit());
+                        poJournal.Detail(poJournal.getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+                        poJournal.Detail(poJournal.getDetailCount() - 1).setAccountCode(xlist1.getAccount());
+                        poJournal.Detail(poJournal.getDetailCount() - 1).setCreditAmount(xlist1.getCredit());
+                        poJournal.Detail(poJournal.getDetailCount() - 1).setDebitAmount(xlist1.getDebit());
+                        poJournal.AddDetail();
+                    }
+                } else {
+                    System.out.println(jsonmaster.toJSONString());
+                }
+
+                //Journa Entry Master
+                poJournal.Master().setAccountPerId("");
+                poJournal.Master().setIndustryCode(getMaster().getIndustryId());
+                poJournal.Master().setBranchCode(poGRider.getBranchCode());
+                poJournal.Master().setDepartmentId(poGRider.getDepartment());
+                poJournal.Master().setTransactionDate(poGRider.getServerDate());
+                poJournal.Master().setCompanyId(psCompanyID);
+                if (pbIsPosting) {
+                    poJournal.Master().setSourceCode(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE);
+                } else {
+                    poJournal.Master().setSourceCode(InvTransCons.BRANCH_TRANSFER);
+                }
+                poJournal.Master().setSourceNo(getMaster().getTransactionNo());
+
+            } else if ((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
+                poJSON.put("result", "success");
+                return poJSON;
+            }
+//            else {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No record to load");
+//                return poJSON;
+//            }
+
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    /**
+     * Check existing Journal
+     *
+     * @return
+     * @throws SQLException
+     */
+    public String existJournal() throws SQLException {
+        Model_Journal_Master loMaster = new CashflowModels(poGRider).Journal_Master();
+        String lsSQL = MiscUtil.makeSelect(loMaster);
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " sSourceNo = " + SQLUtil.toSQL(getMaster().getTransactionNo())
+        );
+        //entry / confirmation is same 
+        if (pbIsPosting) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "sSourceCD = " + SQLUtil.toSQL(InvTransCons.BRANCH_TRANSFER_ACCEPTANCE));
+        } else {
+            lsSQL = MiscUtil.addCondition(lsSQL, "sSourceCD = " + SQLUtil.toSQL(InvTransCons.BRANCH_TRANSFER));
+        }
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        poJSON = new JSONObject();
+        if (MiscUtil.RecordCount(loRS) > 0) {
+            while (loRS.next()) {
+                // Print the result set
+                System.out.println("--------------------------JOURNAL ENTRY--------------------------");
+                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                System.out.println("------------------------------------------------------------------------------");
+                if (loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))) {
+                    return loRS.getString("sTransNox");
+                }
+            }
+        }
+        MiscUtil.close(loRS);
+
+        return "";
+    }
+
+    public boolean isSameCompany() throws SQLException, GuanzonException {
+        if (getMaster().getBranchCode().isEmpty() && getMaster().getDestination().isEmpty()) {
+            return false;
+        }
+        return getMaster().Branch().getCompanyId().equals(getMaster().BranchDestination().getCompanyId());
+    }
+
+    /**
+     * Validates journal entries including debit/credit balance, account code
+     * presence, and valid reporting dates.
+     *
+     * @return JSON validation result with continue flag
+     */
+    private JSONObject validateJournal() {
+        poJSON = new JSONObject();
+        poJSON.put("continue", false);
+
+        double ldblCreditAmt = 0.0000;
+        double ldblDebitAmt = 0.0000;
+        boolean lbHasJournal = false;
+        boolean lbValidateJournal = false;
+        for (int lnCtr = 0; lnCtr <= poJournal.getDetailCount() - 1; lnCtr++) {
+            if (poJournal.Detail(lnCtr).isReverse()) { //Added by Arsiela 05-16-2026 04:24PM
+                ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
+                ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
+                if (poJournal.Detail(lnCtr).getAccountCode() == null || poJournal.Detail(lnCtr).getAccountCode().isEmpty()) {
+                    continue;
+                }
+                if (poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 || poJournal.Detail(lnCtr).getDebitAmount() > 0.0000) {
+                    if (poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())) {
+                        if (poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))) {
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Invalid reporting date of journal at row " + (lnCtr + 1) + " .");
+                            return poJSON;
+                        }
+                    }
+                }
+
+                if (!lbValidateJournal) {
+                    lbValidateJournal = poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode());
+                }
+            }
+
+            if (!lbHasJournal) {
+                lbHasJournal = poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode());
+            }
+        }
+
+        if (lbValidateJournal) {
+            //Convert debit and credit amount
+            ldblDebitAmt = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblDebitAmt, true).replace(",", ""));
+            ldblCreditAmt = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblCreditAmt, true).replace(",", ""));
+
+            if (ldblDebitAmt == 0.0000) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry debit amount.");
+                return poJSON;
+            }
+
+            if (ldblCreditAmt == 0.0000) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry credit amount.");
+                return poJSON;
+            }
+
+//            if (ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Debit should be equal to credit amount.");
+//                return poJSON;
+//            }
+        }
+
+        poJSON.put("result", "sucess");
+        poJSON.put("message", "sucess");
+        poJSON.put("continue", lbHasJournal);
+        return poJSON;
+    }
+
 }
