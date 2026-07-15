@@ -1550,6 +1550,45 @@ public class StockRequest extends Transaction {
         } else {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\none.png");
         }
+        
+        JSONObject loJSON = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+
+        if ("success".equals((String) loJSON.get("result"))) {
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        String lsPreparedBy = entryBy;
+        String lsPreparedByDate = entryDate;
+        String lsConfirmedBy = "";
+        String lsConfirmedDate = "";
+
+        String lsSQL = " SELECT sModified, dModified "
+                + " FROM Transaction_Status_History "
+                + " WHERE sTableNme ='Inv_Stock_Request_Master' "
+                + " AND cRefrStat = '1' AND cTranStat = '1' ORDER BY dModified DESC";
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo =  " + SQLUtil.toSQL(Master().getTransactionNo()));
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                    lsConfirmedBy = poGRider.Decrypt(Master().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(Master().getModifyingId()));
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsConfirmedDate = dModified.format(formatter);
+                }
+            }
+        }
+
+        MiscUtil.close(loRS);
+
+        poReportJasper.addParameter("PrepNme", lsPreparedBy + " - " + lsPreparedByDate);
+        poReportJasper.addParameter("ConfirmNme", lsConfirmedBy + " - " + lsConfirmedDate);
+        poReportJasper.addParameter("ReceivrNme", "");
+        
         poReportJasper.setReportName("Inventory Request Approval");
         poReportJasper.setJasperPath(getJasperReport());
 
