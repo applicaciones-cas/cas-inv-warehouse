@@ -643,10 +643,11 @@ public class InventoryStockIssuanceNeo extends Transaction {
                     if (MiscUtil.RecordCount(loRS) > 0L) {
                         loRS.beforeFirst();
                         if (loRS.next()) {
-                            if (!loRS.getString("cTranStat").equals("1"));
-                            poJSON.put("result", "error");
-                            poJSON.put("message", "Cluster Delivery is not yet confirmed.");
-                            return poJSON;
+                            if (!loRS.getString("cTranStat").equals("1")) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Cluster Delivery is not yet confirmed.");
+                                return poJSON;
+                            }
                         }
                     }
                     MiscUtil.close(loRS);
@@ -1518,7 +1519,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         loBrowse.setWithParentClass(true);
         loBrowse.setRecordStatus("1");
 
-        poJSON = loBrowse.searchRecord(value, false);
+        poJSON = loBrowse.searchRecord(value == null ? "" : value, false);
 
         if (poJSON != null) {
             if ("success".equals((String) poJSON.get("result"))) {
@@ -1886,6 +1887,232 @@ public class InventoryStockIssuanceNeo extends Transaction {
             return poJSON;
 
         }
+        if (InventoryStockIssuanceStatus.OPEN.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction is not yet confirmed.");
+            return poJSON;
+        }
+
+        poJSON = OpenTransaction(getMaster().getTransactionNo());
+        if ("error".equals((String) poJSON.get("result"))) {
+            System.out.println("Print Record open transaction : " + (String) poJSON.get("message"));
+            return poJSON;
+        }
+
+        // Attach listener
+        poReportJasper.setReportListener(new ReportUtilListener() {
+            @Override
+            public void onReportOpen() {
+                System.out.println("Report opened.");
+            }
+
+            @Override
+            public void onReportClose() {
+                //fetch/add if needed
+                System.out.println("Report closed.");
+            }
+
+            @Override
+            public void onReportPrint() {
+                System.out.println("Report printing...");
+                try {
+                    if (pbWthParent) {
+                        poGRider.beginTrans("UPDATE STATUS", "Process Transaction Print Tag", SOURCE_CODE, getMaster().getTransactionNo());
+                    }
+                    if (!getMaster().isPrintedStatus()) {
+                        if (!isJSONSuccess(PrintTransaction(), "Print Record",
+                                "Initialize Record Print! ")) {
+                            return;
+                        }
+                    }
+                    if (getMaster().getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
+                        if (!isJSONSuccess(CloseTransaction(), "Print Record",
+                                "Initialize Close Transaction! ")) {
+                        }
+                    }
+
+                    if (pbWthParent) {
+                        poGRider.commitTrans();
+                    }
+                    poReportJasper.CloseReportUtil();
+
+                } catch (SQLException | GuanzonException | CloneNotSupportedException | ScriptException ex) {
+                    Logger.getLogger(InventoryRequestApproval.class
+                            .getName()).log(Level.SEVERE, null, ex);
+                    ShowMessageFX.Error("", "", ex.getMessage());
+                }
+            }
+
+            @Override
+            public void onReportExport() {
+                System.out.println("Report exported.");
+                if (!isJSONSuccess(poReportJasper.exportReportbyExcel(), "Export Record",
+                        "Initialize Record Export! ")) {
+                    return;
+                }
+
+//                poReportJasper.CloseReportUtil();
+                //if used a model or array please create function 
+            }
+
+            @Override
+            public void onReportExportPDF() {
+                System.out.println("Report exported.");
+//                poReportJasper.CloseReportUtil();
+            }
+
+        }
+        );
+        //add Parameter
+        poReportJasper.addParameter(
+                "BranchName", poGRider.getBranchName());
+        poReportJasper.addParameter("Address", poGRider.getAddress());
+        poReportJasper.addParameter("CompanyName", getMaster().Company().getCompanyName());
+        poReportJasper.addParameter("TransactionNo", getMaster().getTransactionNo());
+        poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(getMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
+        poReportJasper.addParameter("Remarks", getMaster().getRemarks());
+        poReportJasper.addParameter("Destination", getMaster().BranchDestination().getBranchName());
+        poReportJasper.addParameter("Trucking", getMaster().TruckingCompany().getCompanyName());
+        poReportJasper.addParameter("ProjectCode", getMaster().Project().getProjectDescription() == null ? "" : getMaster().Project().getProjectDescription());
+        poReportJasper.addParameter("DatePrinted", SQLUtil.dateFormat(poGRider.getServerDate(), SQLUtil.FORMAT_TIMESTAMP));
+        if (getMaster()
+                .isPrintedStatus()) {
+            poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\reprint.png");
+        } else {
+            poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\blank.png");
+        }
+
+        JSONObject loJSON = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+
+        if ("success".equals((String) loJSON.get("result"))) {
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        String lsPreparedBy = entryBy;
+        String lsPreparedByDate = entryDate;
+        String lsConfirmedBy = "";
+        String lsConfirmedDate = "";
+
+        String lsSQL = " SELECT sModified, dModified "
+                + " FROM Transaction_Status_History "
+                + " WHERE sTableNme ='Inv_Transfer_Master' "
+                + " AND cRefrStat = '1' AND cTranStat = '1' ORDER BY dModified DESC";
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo =  " + SQLUtil.toSQL(getMaster().getTransactionNo()));
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                    lsConfirmedBy = poGRider.Decrypt(getMaster().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(getMaster().getModifyingId()));
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsConfirmedDate = dModified.format(formatter);
+                }
+            }
+        }
+
+        MiscUtil.close(loRS);
+
+        poReportJasper.addParameter("PrepNme", lsPreparedBy + " - " + lsPreparedByDate);
+        poReportJasper.addParameter("ConfirmNme", lsConfirmedBy + " - " + lsConfirmedDate);
+        poReportJasper.addParameter("ReceivrNme", "");
+
+        poReportJasper.setReportName("Inter-Branch Stock Transfer");
+        poReportJasper.setJasperPath(InventoryStockIssuancePrint.getJasperReport(psIndustryCode));
+
+        //process by ResultSet
+        lsSQL = InventoryStockIssuancePrint.PrintRecordQuery();
+        lsSQL = MiscUtil.addCondition(lsSQL, "InventoryTransferMaster.sTransNox = " + SQLUtil.toSQL(getMaster().getTransactionNo()));
+
+        poReportJasper.setSQLReport(lsSQL);
+
+        System.out.println(
+                "Print Data Query :" + lsSQL);
+
+        //process by JasperCollection parse ur List / ArrayList
+        //JRBeanCollectionDataSource jrRS = new JRBeanCollectionDataSource(R1data);
+        //poReportJasper.setJRBeanCollectionDataSource(jrRS);
+        //direct pass JasperViewer
+        //         reportPrint = JasperFillManager.fillReport(poGRider.getReportPath() + psJasperPath + ".jasper",
+        //                    poParamater,
+        //                    yourDATA);
+        //        poReportJasper.setJasperPrint(report0Print);
+        poReportJasper.isAlwaysTop(false);
+        poReportJasper.isWithUI(true);
+        poReportJasper.isWithExport(false);
+        poReportJasper.isWithExportPDF(false);
+        poReportJasper.willExport(true);
+        return poReportJasper.generateReport();
+
+    }
+
+    public JSONObject printRecordCluster() throws SQLException, JRException, CloneNotSupportedException, GuanzonException, ScriptException {
+
+        poJSON = new JSONObject();
+
+        if (InventoryStockIssuanceStatus.POSTED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already Processed.");
+            return poJSON;
+        }
+        if (pbWthParent) {
+            poGRider.beginTrans("UPDATE STATUS", "Process Transaction Print Tag", SOURCE_CODE, getMaster().getTransactionNo());
+        }
+
+        if (getMaster().getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
+            if (!isJSONSuccess(CloseTransaction(), "Print Record",
+                    "Initialize Close Transaction! ")) {
+                return poJSON; 
+            }
+        }
+
+        if (pbWthParent) {
+            poGRider.commitTrans();
+        }
+//        if (InventoryStockIssuanceStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Transaction was already confirmed.");
+//            return poJSON;
+//        }
+
+        if (InventoryStockIssuanceStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already cancelled.");
+            return poJSON;
+        }
+
+        if (InventoryStockIssuanceStatus.VOID.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already voided.");
+            return poJSON;
+        }
+        poJSON = isEntryOkay(InventoryStockIssuanceStatus.CONFIRMED);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        ReportUtil poReportJasper = new ReportUtil(poGRider);
+
+        if (psCategorCD == null && psCategorCD.isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Category is Required for this Transaction");
+            return poJSON;
+        }
+        if (getMaster().getTransactionNo() == null && getMaster().getTransactionNo().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record is Selected");
+            return poJSON;
+
+        }
+        if (InventoryStockIssuanceStatus.OPEN.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction is not yet confirmed.");
+            return poJSON;
+        }
+
         poJSON = OpenTransaction(getMaster().getTransactionNo());
         if ("error".equals((String) poJSON.get("result"))) {
             System.out.println("Print Record open transaction : " + (String) poJSON.get("message"));

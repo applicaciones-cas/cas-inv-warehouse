@@ -2,6 +2,10 @@ package org.guanzon.cas.inv.warehouse;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -277,6 +281,13 @@ public class InventoryRequestApproval extends Transaction {
             poJSON.put("message", "Category is Required for this Transaction");
             return poJSON;
         }
+
+        if (StockRequestStatus.OPEN.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction is not yet confirmed.");
+            return poJSON;
+        }
+
         if (getMaster().getTransactionNo() == null && getMaster().getTransactionNo().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "No record is Selected");
@@ -356,6 +367,19 @@ public class InventoryRequestApproval extends Transaction {
         } else {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\approved.png");
         }
+
+        String lsPreparedBy = poGRider.Decrypt(getMaster().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(getMaster().getModifyingId()));
+
+        String lsPreparedByDate = "";
+        LocalDateTime dModified = LocalDateTime.ofInstant(
+                getMaster().getModifiedDate().toInstant(),
+                ZoneId.systemDefault()
+        );
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+        lsPreparedByDate = dModified.format(formatter);
+
+        poReportJasper.addParameter("PrepNme", lsPreparedBy + " - " + lsPreparedByDate);
+        
         poReportJasper.setReportName("Inventory Request Approval");
         poReportJasper.setJasperPath(getJasperReport());
 
@@ -378,6 +402,27 @@ public class InventoryRequestApproval extends Transaction {
         poReportJasper.willExport(true);
         return poReportJasper.generateReport();
 
+    }
+
+    public String getSysUser(String fsId) throws SQLException, GuanzonException {
+        String lsEntry = "";
+        String lsSQL = " SELECT IFNULL(b.sCompnyNm,'') sCompnyNm FROM xxxSysUser a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId));
+        System.out.println("SQL " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    lsEntry = loRS.getString("sCompnyNm");
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
+        return lsEntry;
     }
 
     private String getJasperReport() {
@@ -480,11 +525,6 @@ public class InventoryRequestApproval extends Transaction {
         if (StockRequestStatus.CONFIRMED.equals((String) poMaster.getValue("cProcessd"))) {
             poJSON.put("result", "success");
             poJSON.put("message", "Transaction Printed successfully.");
-            return poJSON;
-        }
-        //validator
-        poJSON = isEntryOkay(StockRequestStatus.PROCESSED);
-        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
