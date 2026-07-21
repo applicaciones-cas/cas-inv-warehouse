@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
@@ -53,7 +54,7 @@ public class StockRequest_General implements GValidator {
             switch (psTranStat) {
                 case StockRequestStatus.OPEN:
                     return validateNew();
-                case StockRequestStatus.CONFIRMED: 
+                case StockRequestStatus.CONFIRMED:
                     return validateConfirmed();
                 case StockRequestStatus.PROCESSED:
                     return validateProcessed();
@@ -171,9 +172,16 @@ public class StockRequest_General implements GValidator {
     }
 
     private JSONObject validateVoid() {
-        poJSON = new JSONObject();
 
+        boolean isRequiredApproval = false;
+
+        poJSON = new JSONObject();
+        if (poGrider.getUserLevel() <= UserRight.ENCODER) {
+            isRequiredApproval = true;
+        }
         poJSON.put("result", "success");
+        poJSON.put("isRequiredApproval", isRequiredApproval);
+
         return poJSON;
     }
 }

@@ -107,12 +107,12 @@ public class StockRequest extends Transaction {
     }
 
     public JSONObject UpdateTransaction() {
-        if (Master().getTransactionStatus().equals( StockRequestStatus.CONFIRMED)) {
+        if (Master().getTransactionStatus().equals(StockRequestStatus.CONFIRMED)) {
             poJSON.put("result", "error");
             poJSON.put("message", "Unable to modify processed / confirmed transaction.");
             return poJSON;
         }
-        if (Master().getTransactionStatus().equals(  StockRequestStatus.PROCESSED)) {
+        if (Master().getTransactionStatus().equals(StockRequestStatus.PROCESSED)) {
 
             poJSON.put("result", "error");
             poJSON.put("message", "Unable to modify processed / confirmed transaction.");
@@ -338,7 +338,7 @@ public class StockRequest extends Transaction {
             poGRider.rollbackTrans();
             return poJSON;
         }
-           //update 0616/2026 c/o maam she
+        //update 0616/2026 c/o maam she
 //        //maynard - 2026.03.13 14:41
 //        InventoryTransaction loTrans = new InventoryTransaction(poGRider);
 //
@@ -616,7 +616,7 @@ public class StockRequest extends Transaction {
 //                loTrans.saveTransaction();
 //            }
 
-            poJSON = saveUpdates(StockRequestStatus.CONFIRMED);
+            poJSON = saveUpdates(StockRequestStatus.VOID);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -676,7 +676,7 @@ public class StockRequest extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setBranchCode(object.getModel().getBranchCode());
-            
+
             poJSON = new JSONObject();
             poJSON.put("result", "success");
         }
@@ -692,7 +692,7 @@ public class StockRequest extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setIndustryId(object.getModel().getIndustryId());
-            
+
             poJSON = new JSONObject();
             poJSON.put("result", "success");
         }
@@ -708,7 +708,7 @@ public class StockRequest extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setCategoryId(object.getModel().getCategoryId());
-            
+
             poJSON = new JSONObject();
             poJSON.put("result", "success");
 
@@ -726,7 +726,7 @@ public class StockRequest extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             poJSON.put("brandDesc", brand.getModel().getDescription());
             poJSON.put("brandID", brand.getModel().getBrandId());
-            
+
         }
         return poJSON;
     }
@@ -1550,7 +1550,7 @@ public class StockRequest extends Transaction {
         } else {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\none.png");
         }
-        
+
         JSONObject loJSON = getEntryBy();
         String entryBy = "";
         String entryDate = "";
@@ -1575,7 +1575,7 @@ public class StockRequest extends Transaction {
         if (MiscUtil.RecordCount(loRS) > 0L) {
             if (loRS.next()) {
                 if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
-                    lsConfirmedBy = poGRider.Decrypt(Master().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(Master().getModifyingId()));
+                    lsConfirmedBy = poGRider.Decrypt(loRS.getString("sModified")) == null ? "" : getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
                     LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
                     lsConfirmedDate = dModified.format(formatter);
@@ -1588,7 +1588,7 @@ public class StockRequest extends Transaction {
         poReportJasper.addParameter("PrepNme", lsPreparedBy + " - " + lsPreparedByDate);
         poReportJasper.addParameter("ConfirmNme", lsConfirmedBy + " - " + lsConfirmedDate);
         poReportJasper.addParameter("ReceivrNme", "");
-        
+
         poReportJasper.setReportName("Inventory Request Approval");
         poReportJasper.setJasperPath(getJasperReport());
 

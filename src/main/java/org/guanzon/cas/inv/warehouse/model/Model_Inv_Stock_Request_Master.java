@@ -44,6 +44,7 @@ public class Model_Inv_Stock_Request_Master extends Model {
             poEntity.updateObject("cProcessd", 0);
             poEntity.updateObject("cPrintxxx", 0);
             poEntity.updateString("cTranStat", StockRequestStatus.OPEN);
+            poEntity.updateObject("dModified", poGRider.getServerDate());
             //end - assign default values
 
             poEntity.insertRow();

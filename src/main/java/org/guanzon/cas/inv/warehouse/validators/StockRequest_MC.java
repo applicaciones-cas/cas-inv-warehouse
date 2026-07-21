@@ -11,6 +11,7 @@ import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.json.simple.JSONObject;
 import java.util.Date;
+import org.guanzon.appdriver.constant.UserRight;
 
 public class StockRequest_MC implements GValidator {
 
@@ -171,9 +172,16 @@ public class StockRequest_MC implements GValidator {
     }
 
     private JSONObject validateVoid() {
-        poJSON = new JSONObject();
 
+        boolean isRequiredApproval = false;
+
+        poJSON = new JSONObject();
+        if (poGrider.getUserLevel() <= UserRight.ENCODER) {
+            isRequiredApproval = true;
+        }
         poJSON.put("result", "success");
+        poJSON.put("isRequiredApproval", isRequiredApproval);
+
         return poJSON;
     }
 }
