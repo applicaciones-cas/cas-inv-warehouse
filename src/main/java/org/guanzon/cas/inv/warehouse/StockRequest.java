@@ -1540,7 +1540,7 @@ public class StockRequest extends Transaction {
         //add Parameter
         poReportJasper.addParameter("BranchName", poGRider.getBranchName());
         poReportJasper.addParameter("Address", poGRider.getAddress());
-        poReportJasper.addParameter("CompanyName", poGRider.getClientName());
+        poReportJasper.addParameter("CompanyName", Master().Company().getCompanyName());
         poReportJasper.addParameter("TransactionNo", Master().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(Master().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", Master().getRemarks());
