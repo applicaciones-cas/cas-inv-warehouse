@@ -579,10 +579,12 @@ public class InventoryStockIssuanceNeo extends Transaction {
         poJSON = new JSONObject();
 
         poJSON.put("result", "success");
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction confirmed successfully.");
-        } else {
-            poJSON.put("message", "Transaction confirmation request submitted successfully.");
+        if (!pbWthParent) {
+            if (lbConfirm) {
+                poJSON.put("message", "Transaction confirmed successfully.");
+            } else {
+                poJSON.put("message", "Transaction confirmation request submitted successfully.");
+            }
         }
         return poJSON;
     }
@@ -607,15 +609,17 @@ public class InventoryStockIssuanceNeo extends Transaction {
 
     public JSONObject UnSaveIssuedTransaction(int EntryNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        Model_Inventory_Transfer_Detail loDetail = (Model_Inventory_Transfer_Detail) paDetail.get(EntryNo);
-        Model_Inv_Stock_Request_Detail loStockDetail = loDetail.InventoryStockRequest();
-        if (loStockDetail.getEditMode() == EditMode.READY) {
-            loStockDetail.updateRecord();
-            loStockDetail.setIssued(-loDetail.getQuantity());
-            poJSON = loStockDetail.saveRecord();
+        if (getMaster().getTransactionStatus().equals(InventoryStockIssuanceStatus.CONFIRMED)) {
+            Model_Inventory_Transfer_Detail loDetail = (Model_Inventory_Transfer_Detail) paDetail.get(EntryNo);
+            Model_Inv_Stock_Request_Detail loStockDetail = loDetail.InventoryStockRequest();
+            if (loStockDetail.getEditMode() == EditMode.READY) {
+                loStockDetail.updateRecord();
+                loStockDetail.setIssued(loStockDetail.getIssued() - loDetail.getQuantity());
+                poJSON = loStockDetail.saveRecord();
 
-            if (!"success".equals((String) poJSON.get("result"))) {
-                return poJSON;
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
             }
         }
         poJSON = new JSONObject();
@@ -2049,7 +2053,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
 
     }
 
-    public JSONObject printRecordCluster() throws SQLException, JRException, CloneNotSupportedException, GuanzonException, ScriptException {
+    public JSONObject printRecordCluster(String lsSource) throws SQLException, JRException, CloneNotSupportedException, GuanzonException, ScriptException {
 
         poJSON = new JSONObject();
 
@@ -2065,7 +2069,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if (getMaster().getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
             if (!isJSONSuccess(CloseTransaction(), "Print Record",
                     "Initialize Close Transaction! ")) {
-                return poJSON; 
+                return poJSON;
             }
         }
 
@@ -2202,7 +2206,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\blank.png");
         }
 
-        JSONObject loJSON = getEntryBy();
+        JSONObject loJSON = getEntryByCluster(lsSource);
         String entryBy = "";
         String entryDate = "";
 
@@ -2530,6 +2534,46 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 + " LEFT JOIN xxxAuditLogMaster b ON"
                 + " b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(getMaster().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(getMaster().getTransactionNo()));
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                        if (loRS.getString("sModified").length() > 10) {
+                            lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
+                        } else {
+                            lsEntry = getSysUser(loRS.getString("sModified"));
+                        }
+                        // Get the LocalDateTime from your result set
+                        LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                        lsEntryDate = dModified.format(formatter);
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+            return poJSON;
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("sCompnyNm", lsEntry);
+        poJSON.put("sEntryDte", lsEntryDate);
+        return poJSON;
+    }
+
+    public JSONObject getEntryByCluster(String lsSource) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsEntry = "";
+        String lsEntryDate = "";
+        String lsSQL = " SELECT b.sModified, b.dModified "
+                + " FROM Cluster_Delivery_Master a "
+                + " LEFT JOIN xxxAuditLogMaster b ON"
+                + " b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(getMaster().getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(lsSource));
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
