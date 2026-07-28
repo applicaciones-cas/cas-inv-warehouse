@@ -37,20 +37,15 @@ import org.guanzon.cas.parameter.TownCity;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.guanzon.cas.inv.warehouse.status.DeliveryStockIssuanceRecord;
-import org.guanzon.cas.inv.warehouse.status.InventoryStockIssuancePrint;
 import org.guanzon.cas.inv.warehouse.status.InventoryStockIssuanceStatus;
 import org.guanzon.cas.inv.warehouse.model.Model_Cluster_Delivery_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Cluster_Delivery_Master;
-import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Detail;
-import org.guanzon.cas.inv.warehouse.report.ReportUtil;
-import org.guanzon.cas.inv.warehouse.report.ReportUtilListener;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceControllers;
 import org.guanzon.cas.inv.warehouse.services.DeliveryIssuanceModels;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.guanzon.cas.parameter.BranchCluster;
 import org.guanzon.cas.inv.warehouse.validators.InventoryClusterIssuanceValidatorFactory;
-import org.json.simple.JSONArray;
 
 public class InventoryStockIssuance extends Transaction {
 
@@ -409,7 +404,10 @@ public class InventoryStockIssuance extends Transaction {
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
             poJSON = SaveTransactionDelivery(lnCtr + 1);
             if ("error".equals((String) poJSON.get("result"))) {
-                if (((String) poJSON.get("result")).contains("unmodified")) {
+                if (((String) poJSON.get("message")).contains("unmodified")) {
+                    poJSON = new JSONObject();
+                    poJSON.put("result", "success");
+
                     continue;
                 }
                 return poJSON;
@@ -427,13 +425,22 @@ public class InventoryStockIssuance extends Transaction {
         }
 
         System.out.println(getDetail(deliveryNo).InventoryTransfer().getMaster().getTransactionNo());
-        poGRider.beginTrans("SAVE STATUS", "SaveTransaction", SOURCE_CODE, getMaster().getTransactionNo());
+        if (getDetail(deliveryNo).InventoryTransfer().getEditMode() == EditMode.ADDNEW) {
+            poGRider.beginTrans("ADD NEW", "Inv_Transfer_Master", SOURCE_CODE, getMaster().getTransactionNo());
+        } else {
+            poGRider.beginTrans("UPDATE STATUS", "Inv_Transfer_Master", SOURCE_CODE, getMaster().getTransactionNo());
+        }
         getDetail(deliveryNo).InventoryTransfer().setWithParent(true);
         computeTotal(deliveryNo);
         poJSON = getDetail(deliveryNo).InventoryTransfer().SaveTransaction();
         if ("error".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
+            if (((String) poJSON.get("message")).contains("unmodified")) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "success");
+            } else {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
         }
         //commit existing 
         poGRider.commitTrans();
@@ -460,6 +467,7 @@ public class InventoryStockIssuance extends Transaction {
     }
 
     public JSONObject CancelTransactionDelivery(int deliveryNo) throws SQLException, GuanzonException, CloneNotSupportedException {
+
         poGRider.beginTrans("CANCEL STATUS", "Cancel Transaction", SOURCE_CODE, getMaster().getTransactionNo());
 
         System.out.println(getDetail(deliveryNo).InventoryTransfer().getMaster().getTransactionNo());
@@ -470,7 +478,6 @@ public class InventoryStockIssuance extends Transaction {
         }
 
         poGRider.commitTrans();
-
         getDetail(deliveryNo).setCancelled("1");
         getDetail(deliveryNo).setCancelledDate(poGRider.getServerDate());
         poJSON = SaveTransaction();
@@ -478,9 +485,15 @@ public class InventoryStockIssuance extends Transaction {
             poJSON.put("result", "success");
             OpenTransaction((String) poMaster.getValue("sTransNox"));
             UpdateTransaction();
+            if ("error".equals((String) poJSON.get("result"))) {
+                if (((String) poJSON.get("message")).contains("already")) {
+                    poJSON = new JSONObject();
+                    poJSON.put("result", "success");
+                }
+            }
+
             return poJSON;
         }
-
         return poJSON;
     }
 
@@ -1294,7 +1307,7 @@ public class InventoryStockIssuance extends Transaction {
                 && !getMaster().getTownId().isEmpty()) {
             lsSQL = MiscUtil.addCondition(lsSQL, " e.sTownIDxx = " + SQLUtil.toSQL(getMaster().getTownId()));
         }
-        lsSQL = MiscUtil.addCondition(lsSQL, " b.nApproved > 0 AND b.nQuantity > (b.nCancelld + b.nIssueQty + b.nOrderQty) ");
+        lsSQL = MiscUtil.addCondition(lsSQL, " b.nApproved > 0 AND b.nApproved > (b.nCancelld + b.nIssueQty + b.nOrderQty) ");
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cProcessd = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         lsSQL = MiscUtil.addCondition(lsSQL, "d.sClustrID = " + SQLUtil.toSQL(getMaster().getClusterID()));
 
@@ -1559,7 +1572,6 @@ public class InventoryStockIssuance extends Transaction {
 //        return poReportJasper.generateReport();
 //
 //    }
-
     private boolean isJSONSuccess(JSONObject loJSON, String module, String fsModule) {
         String result = (String) loJSON.get("result");
         if ("error".equals(result)) {
@@ -1836,9 +1848,11 @@ public class InventoryStockIssuance extends Transaction {
                             lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
                         } else {
                             lsEntry = getSysUser(loRS.getString("sModified"));
+
                         }
                         // Get the LocalDateTime from your result set
-                        LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                        LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class
+                        );
                         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
                         lsEntryDate = dModified.format(formatter);
                     }

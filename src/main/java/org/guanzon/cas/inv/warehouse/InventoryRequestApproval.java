@@ -357,7 +357,7 @@ public class InventoryRequestApproval extends Transaction {
         //add Parameter
         poReportJasper.addParameter("BranchName", poGRider.getBranchName());
         poReportJasper.addParameter("Address", poGRider.getAddress());
-        poReportJasper.addParameter("CompanyName", poGRider.getClientName());
+        poReportJasper.addParameter("CompanyName", getMaster().Company().getCompanyName());
         poReportJasper.addParameter("TransactionNo", getMaster().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(getMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", getMaster().getRemarks());

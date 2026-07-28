@@ -196,7 +196,7 @@ public class InventoryStockClusterIssuance_MC implements GValidator {
                 if (paDetail.get(lnCtr).InventoryTransfer().getMaster()
                         .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Unprinted delivery Detected. Row =" + lnCtr);
+                    poJSON.put("message", "Unprinted delivery Detected. Row =" + lnCtr+1);
                     return poJSON;
                 }
                 lnDetailCount++;
@@ -265,7 +265,7 @@ public class InventoryStockClusterIssuance_MC implements GValidator {
                 if (!paDetail.get(lnCtr).InventoryTransfer().getMaster()
                         .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr);
+                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr+1);
                     return poJSON;
                 }
 
@@ -291,7 +291,7 @@ public class InventoryStockClusterIssuance_MC implements GValidator {
                 if (!paDetail.get(lnCtr).InventoryTransfer().getMaster()
                         .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr);
+                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr+1);
                     return poJSON;
                 }
 
