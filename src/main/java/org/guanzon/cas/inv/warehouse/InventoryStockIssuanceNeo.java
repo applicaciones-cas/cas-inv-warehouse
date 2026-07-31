@@ -2010,7 +2010,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if (MiscUtil.RecordCount(loRS) > 0L) {
             if (loRS.next()) {
                 if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
-                    lsConfirmedBy = poGRider.Decrypt(getMaster().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(getMaster().getModifyingId()));
+                    lsConfirmedBy = poGRider.Decrypt(loRS.getString("sModified")) == null ? "" : getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
                     LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
                     lsConfirmedDate = dModified.format(formatter);
@@ -2230,7 +2230,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if (MiscUtil.RecordCount(loRS) > 0L) {
             if (loRS.next()) {
                 if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
-                    lsConfirmedBy = poGRider.Decrypt(getMaster().getModifyingId()) == null ? "" : getSysUser(poGRider.Decrypt(getMaster().getModifyingId()));
+                    lsConfirmedBy = poGRider.Decrypt(loRS.getString("sModified")) == null ? "" : getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
                     LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
                     lsConfirmedDate = dModified.format(formatter);
