@@ -776,8 +776,8 @@ public class StockRequest extends Transaction {
         object.setIndustryID(lsIndustry);
         object.setBranchCode(poGRider.getBranchCode());
 
-        poJSON = object.searchRecord(value, byCode, null,
-                psIndustryCode, brandId);
+        poJSON = object.searchRecord(value, byCode,
+                psIndustryCode, brandId, false);
 
         if ("success".equals((String) poJSON.get("result"))) {
             String stockId = object.getModel().getStockId();
@@ -801,6 +801,7 @@ public class StockRequest extends Transaction {
             }
 
             Detail(row).setStockId(stockId);
+            Detail(row).setQuantityOnHand(object.getModel().getQuantityOnHand());
 
             poJSON.put("result", "success");
             poJSON.put("message", "Barcode added successfully.");
@@ -820,8 +821,8 @@ public class StockRequest extends Transaction {
         object.setIndustryID(lsIndustry);
         object.setBranchCode(poGRider.getBranchCode());
 
-        poJSON = object.searchRecord(value, byCode, null,
-                psIndustryCode, brandId);
+        poJSON = object.searchRecord(value, byCode, 
+                psIndustryCode, brandId, false);
 
         if ("success".equals((String) poJSON.get("result"))) {
             String stockId = object.getModel().getStockId();
@@ -843,9 +844,9 @@ public class StockRequest extends Transaction {
                     }
                 }
             }
-
             Detail(row).setStockId(stockId);
             Detail(row).setCategoryCode(object.getModel().Inventory().getCategoryFirstLevelId());
+            Detail(row).setQuantityOnHand(object.getModel().getQuantityOnHand());
 
             poJSON.put("result", "success");
             poJSON.put("message", "Barcode added successfully.");
@@ -865,8 +866,8 @@ public class StockRequest extends Transaction {
         object.setIndustryID(lsIndustry);
         object.setBranchCode(poGRider.getBranchCode());
 
-        poJSON = object.searchRecord(value, byCode, null,
-                psIndustryCode, brandId);
+        poJSON = object.searchRecord(value, byCode,
+                psIndustryCode, brandId, false);
 
         if ("success".equals((String) poJSON.get("result"))) {
             String stockId = object.getModel().getStockId();
@@ -890,6 +891,7 @@ public class StockRequest extends Transaction {
             }
 
             Detail(row).setStockId(stockId);
+            Detail(row).setQuantityOnHand(object.getModel().getQuantityOnHand());
 
             poJSON.put("result", "success");
             poJSON.put("message", "Description added successfully.");
@@ -907,8 +909,8 @@ public class StockRequest extends Transaction {
         object.setIndustryID(lsIndustry);
         object.setBranchCode(poGRider.getBranchCode());
 
-        poJSON = object.searchRecord(value, byCode, null,
-                psIndustryCode, brandId);
+        poJSON = object.searchRecord(value, byCode,
+                psIndustryCode, brandId, false);
 
         if ("success".equals((String) poJSON.get("result"))) {
             String stockId = object.getModel().getStockId();
@@ -932,6 +934,7 @@ public class StockRequest extends Transaction {
             }
 
             Detail(row).setStockId(stockId);
+            Detail(row).setQuantityOnHand(object.getModel().getQuantityOnHand());
 
             poJSON.put("result", "success");
             poJSON.put("message", "Description added successfully.");
@@ -1296,11 +1299,12 @@ public class StockRequest extends Transaction {
             while (loROQ.next()) {
                 String lsStockID = loROQ.getString("sStockIDx");
                 double lnROQ = loROQ.getDouble("nRecOrder");
+                double lnQOH = loROQ.getDouble("nQtyOnHnd");
 
                 int row = getDetailCount() - 1;
                 Detail(row).setStockId(lsStockID);
                 Detail(row).setRecommendedOrder(lnROQ);
-
+                Detail(row).setQuantityOnHand(lnQOH);
                 index++;
                 if (index < totalROQ) {
                     AddDetail();
