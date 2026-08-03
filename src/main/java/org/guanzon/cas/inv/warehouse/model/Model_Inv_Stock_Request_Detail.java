@@ -157,7 +157,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
     }
 
     public double getQuantityOnHand() {
-        return Double.parseDouble(String.valueOf(getValue("nRecOrder")));
+        return Double.parseDouble(String.valueOf(getValue("nQtyOnHnd")));
     }
 
     public JSONObject setReservedOrder(double quantity) {
@@ -278,7 +278,7 @@ public class Model_Inv_Stock_Request_Detail extends Model {
                     && poInvMaster.getStockId().equals((String) getValue("sStockIDx"))) {
                 return poInvMaster;
             } else {
-                poJSON= poInvMaster.openRecord((String) getValue("sStockIDx"));
+                poJSON= poInvMaster.openRecord((String) getValue("sStockIDx"),poGRider.getIndustry(),poGRider.getBranchCode());
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poInvMaster;
