@@ -13,6 +13,7 @@ import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
+import org.guanzon.cas.parameter.model.Model_Project;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
@@ -23,6 +24,7 @@ public class Model_Inv_Stock_Request_Master extends Model {
     Model_Industry poIndustry;
     Model_Category poCategory;
     Model_Company poCompany;
+    Model_Project poProject;
 
     @Override
     public void initialize() {
@@ -60,6 +62,7 @@ public class Model_Inv_Stock_Request_Master extends Model {
             poBranch = model.Branch();
             poIndustry = model.Industry();
             poCategory = model.Category();
+            poProject = model.Project();
             //end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -145,6 +148,14 @@ public class Model_Inv_Stock_Request_Master extends Model {
 
     public String getIssuanceNotes() {
         return (String) getValue("sIssNotes");
+    }
+
+    public JSONObject setProjectId(String projectId) {
+        return setValue("sProjCode", projectId);
+    }
+
+    public String getProjectId() {
+        return (String) getValue("sProjCode");
     }
 
     public JSONObject setCurrentInventory(int quantity) {
@@ -325,6 +336,27 @@ public class Model_Inv_Stock_Request_Master extends Model {
         } else {
             poCompany.initialize();
             return poCompany;
+        }
+    }
+   
+    //Arsiela 08-06-2026 - Added functionality for Source No from project title
+    public Model_Project Project() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sProjCode"))) {
+            if (poProject.getEditMode() == EditMode.READY
+                    && poProject.getProjectID().equals((String) getValue("sProjCode"))) {
+                return poProject;
+            } else {
+                poJSON = poProject.openRecord((String) getValue("sProjCode"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poProject;
+                } else {
+                    poProject.initialize();
+                    return poProject;
+                }
+            }
+        } else {
+            poProject.initialize();
+            return poProject;
         }
     }
 }
