@@ -339,6 +339,7 @@ public class Model_Inv_Stock_Request_Master extends Model {
         }
     }
    
+    //Arsiela 08-06-2026 - Added functionality for Source No from project title
     public Model_Project Project() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sProjCode"))) {
             if (poProject.getEditMode() == EditMode.READY
