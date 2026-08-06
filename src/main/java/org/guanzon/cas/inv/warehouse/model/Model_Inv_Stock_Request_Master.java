@@ -13,6 +13,7 @@ import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
+import org.guanzon.cas.parameter.model.Model_Project;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
@@ -23,6 +24,7 @@ public class Model_Inv_Stock_Request_Master extends Model {
     Model_Industry poIndustry;
     Model_Category poCategory;
     Model_Company poCompany;
+    Model_Project poProject;
 
     @Override
     public void initialize() {
@@ -60,6 +62,7 @@ public class Model_Inv_Stock_Request_Master extends Model {
             poBranch = model.Branch();
             poIndustry = model.Industry();
             poCategory = model.Category();
+            poProject = model.Project();
             //end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -325,6 +328,26 @@ public class Model_Inv_Stock_Request_Master extends Model {
         } else {
             poCompany.initialize();
             return poCompany;
+        }
+    }
+   
+    public Model_Project Project() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sReferNox"))) {
+            if (poProject.getEditMode() == EditMode.READY
+                    && poProject.getProjectID().equals((String) getValue("sReferNox"))) {
+                return poProject;
+            } else {
+                poJSON = poProject.openRecord((String) getValue("sReferNox"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poProject;
+                } else {
+                    poProject.initialize();
+                    return poProject;
+                }
+            }
+        } else {
+            poProject.initialize();
+            return poProject;
         }
     }
 }

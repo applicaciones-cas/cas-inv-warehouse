@@ -43,6 +43,7 @@ import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Brand;
 import org.guanzon.cas.parameter.Category;
 import org.guanzon.cas.parameter.Industry;
+import org.guanzon.cas.parameter.Project;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -677,6 +678,20 @@ public class StockRequest extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setBranchCode(object.getModel().getBranchCode());
 
+            poJSON = new JSONObject();
+            poJSON.put("result", "success");
+        }
+
+        return poJSON;
+    }
+    
+    //Added search for project by Arsiela 08-06-2026
+    public JSONObject SearchSource(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Project object = new ParamControllers(poGRider, logwrapr).Project();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().setReferenceNo(object.getModel().getProjectID());
             poJSON = new JSONObject();
             poJSON.put("result", "success");
         }
