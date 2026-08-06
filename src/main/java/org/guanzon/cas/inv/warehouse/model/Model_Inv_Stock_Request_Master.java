@@ -150,6 +150,14 @@ public class Model_Inv_Stock_Request_Master extends Model {
         return (String) getValue("sIssNotes");
     }
 
+    public JSONObject setProjectId(String projectId) {
+        return setValue("sProjCode", projectId);
+    }
+
+    public String getProjectId() {
+        return (String) getValue("sProjCode");
+    }
+
     public JSONObject setCurrentInventory(int quantity) {
         return setValue("nCurrInvx", quantity);
     }
@@ -332,12 +340,12 @@ public class Model_Inv_Stock_Request_Master extends Model {
     }
    
     public Model_Project Project() throws GuanzonException, SQLException {
-        if (!"".equals((String) getValue("sReferNox"))) {
+        if (!"".equals((String) getValue("sProjCode"))) {
             if (poProject.getEditMode() == EditMode.READY
-                    && poProject.getProjectID().equals((String) getValue("sReferNox"))) {
+                    && poProject.getProjectID().equals((String) getValue("sProjCode"))) {
                 return poProject;
             } else {
-                poJSON = poProject.openRecord((String) getValue("sReferNox"));
+                poJSON = poProject.openRecord((String) getValue("sProjCode"));
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poProject;
                 } else {

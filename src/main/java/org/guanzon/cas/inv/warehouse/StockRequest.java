@@ -691,7 +691,7 @@ public class StockRequest extends Transaction {
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            Master().setReferenceNo(object.getModel().getProjectID());
+            Master().setProjectId(object.getModel().getProjectID());
             poJSON = new JSONObject();
             poJSON.put("result", "success");
         }
