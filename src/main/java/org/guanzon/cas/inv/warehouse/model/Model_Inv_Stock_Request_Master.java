@@ -149,14 +149,14 @@ public class Model_Inv_Stock_Request_Master extends Model {
     public String getIssuanceNotes() {
         return (String) getValue("sIssNotes");
     }
-
-    public JSONObject setProjectId(String projectId) {
-        return setValue("sProjCode", projectId);
-    }
-
-    public String getProjectId() {
-        return (String) getValue("sProjCode");
-    }
+//Will be remove column by sir mac; Arsiela 08-21-2026
+//    public JSONObject setProjectId(String projectId) {
+//        return setValue("sProjCode", projectId);
+//    }
+//
+//    public String getProjectId() {
+//        return (String) getValue("sProjCode");
+//    }
 
     public JSONObject setCurrentInventory(int quantity) {
         return setValue("nCurrInvx", quantity);

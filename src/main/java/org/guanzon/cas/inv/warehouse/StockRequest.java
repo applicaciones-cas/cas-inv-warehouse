@@ -687,11 +687,41 @@ public class StockRequest extends Transaction {
     
     //Added search for project by Arsiela 08-06-2026
     public JSONObject SearchSource(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        String lsReferNo = value;
+        //Split value for project code
+        /*
+            sample entries: sir mac 08-21-2026
+            PRJ-00-01;000001 -> with project code and reference no
+            0;000001 -> no project code and but with reference no
+            PRJ-00-01 -> with project code but without reference no 
+            empty string - no project code and reference no
+        */
+        if(value != null && !"".equals(value)){
+            int separatorIndex = value.indexOf(';');
+            value = separatorIndex >= 0
+                    ? value.substring(0, separatorIndex)
+                    : value;
+            if("0".equals(value)){
+                value = "";
+            }
+            System.out.println("Project Code : "+value);
+
+            separatorIndex = lsReferNo.indexOf(';');
+            lsReferNo = separatorIndex >= 0
+                    ? lsReferNo.substring(separatorIndex + 1)
+                    : "";
+            System.out.println("Reference No : "+lsReferNo);
+        }
+        
         Project object = new ParamControllers(poGRider, logwrapr).Project();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            Master().setProjectId(object.getModel().getProjectID());
+            if(lsReferNo != null && !"".equals(lsReferNo)){
+                Master().setReferenceNo(object.getModel().getProjectID()+";"+lsReferNo);
+            } else {
+                Master().setReferenceNo(object.getModel().getProjectID());
+            }
             poJSON = new JSONObject();
             poJSON.put("result", "success");
         }
