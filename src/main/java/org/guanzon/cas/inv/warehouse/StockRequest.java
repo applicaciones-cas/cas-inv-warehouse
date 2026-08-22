@@ -743,6 +743,11 @@ public class StockRequest extends Transaction {
             fsValue = separatorIndex >= 0
                     ? fsValue.substring(0, separatorIndex)
                     : fsValue;
+            if ("".equals(fsValue)) {
+                poJSON.put("message", "Invalid reference no.");
+                poJSON.put("result", "error");
+                return poJSON;
+            }
             if("0".equals(fsValue)){
                 fsValue = "";
             }
