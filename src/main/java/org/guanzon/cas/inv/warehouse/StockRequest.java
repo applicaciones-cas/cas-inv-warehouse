@@ -728,6 +728,43 @@ public class StockRequest extends Transaction {
 
         return poJSON;
     }
+    
+    public JSONObject checkProjectCode(String fsValue) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        /*
+            sample entries: sir mac 08-21-2026
+            PRJ-00-01;000001 -> with project code and reference no
+            0;000001 -> no project code and but with reference no
+            PRJ-00-01 -> with project code but without reference no 
+            empty string - no project code and reference no
+        */
+        if(fsValue != null && !"".equals(fsValue)){
+            int separatorIndex = fsValue.indexOf(';');
+            fsValue = separatorIndex >= 0
+                    ? fsValue.substring(0, separatorIndex)
+                    : fsValue;
+            if("0".equals(fsValue)){
+                fsValue = "";
+            }
+            System.out.println("Project Code : "+fsValue);
+            
+            if(fsValue != null && !"".equals(fsValue)){
+                Project object = new ParamControllers(poGRider, logwrapr).Project();
+                object.setRecordStatus(RecordStatus.ACTIVE);
+                poJSON = object.openRecord(fsValue);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message", "Invalid reference no.\n" + (String) poJSON.get("message"));
+                    poJSON.put("result", "error");
+                    return poJSON;
+                }
+            }
+
+        }
+    
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        return poJSON;
+    }
 
     public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
