@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -14,9 +13,7 @@ import java.util.logging.Logger;
 import javafx.application.Platform;
 import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
-import net.sf.jasperreports.engine.JRException;
 import org.guanzon.appdriver.agent.ActionAuthManager;
-import org.guanzon.appdriver.agent.MatrixAuthChecker;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -30,7 +27,6 @@ import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
-import org.guanzon.cas.inv.InventoryTransaction;
 import org.guanzon.cas.inv.warehouse.model.Model_Inv_Stock_Request_Master;
 import org.guanzon.cas.inv.warehouse.services.InvWarehouseModels;
 import org.guanzon.cas.parameter.TownCity;
@@ -247,6 +243,7 @@ public class InventoryStockIssuance extends Transaction {
         //Inventory Transfer Master
         loDetail.InventoryTransfer().getMaster().setOrderNo(loStockMaster.getTransactionNo());
         loDetail.InventoryTransfer().getMaster().setDestination(loStockMaster.getBranchCode());
+        loDetail.InventoryTransfer().getMaster().setProjectCode(loStockMaster.getReferenceNo());
         loDetail.InventoryTransfer().getMaster().setDeliveryType("1");
         //Inventory Transfer Detail
 
@@ -309,6 +306,7 @@ public class InventoryStockIssuance extends Transaction {
         //Inventory Transfer Master
         loDetail.InventoryTransfer().getMaster().setOrderNo(loStockMaster.getTransactionNo());
         loDetail.InventoryTransfer().getMaster().setDestination(loStockMaster.getBranchCode());
+        loDetail.InventoryTransfer().getMaster().setProjectCode(loStockMaster.getReferenceNo());
         loDetail.InventoryTransfer().getMaster().setDeliveryType("1");
         //Inventory Transfer Detail
 
@@ -338,7 +336,7 @@ public class InventoryStockIssuance extends Transaction {
             throws GuanzonException, SQLException, CloneNotSupportedException {
         InventoryRequestApproval loSubClass = new DeliveryIssuanceControllers(poGRider, null).InventoryRequestApproval();
         loSubClass.initTransaction();
-        loSubClass.OpenTransaction(transactionNo);
+        poJSON = loSubClass.OpenTransaction(transactionNo);
 
         if ("error".equals((String) poJSON.get("result"))) {
             return null;
@@ -472,6 +470,37 @@ public class InventoryStockIssuance extends Transaction {
 
         System.out.println(getDetail(deliveryNo).InventoryTransfer().getMaster().getTransactionNo());
         poJSON = getDetail(deliveryNo).InventoryTransfer().CancelTransaction();
+        if ("error".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+        getDetail(deliveryNo).setCancelled("1");
+        getDetail(deliveryNo).setCancelledDate(poGRider.getServerDate());
+        poJSON = SaveTransaction();
+        if (!"error".equals((String) poJSON.get("result"))) {
+            poJSON.put("result", "success");
+            OpenTransaction((String) poMaster.getValue("sTransNox"));
+            UpdateTransaction();
+            if ("error".equals((String) poJSON.get("result"))) {
+                if (((String) poJSON.get("message")).contains("already")) {
+                    poJSON = new JSONObject();
+                    poJSON.put("result", "success");
+                }
+            }
+
+            return poJSON;
+        }
+        return poJSON;
+    }
+
+    public JSONObject VoidTransactionDelivery(int deliveryNo) throws SQLException, GuanzonException, CloneNotSupportedException {
+
+        poGRider.beginTrans("VOID STATUS", "Void Transaction", SOURCE_CODE, getMaster().getTransactionNo());
+
+        System.out.println(getDetail(deliveryNo).InventoryTransfer().getMaster().getTransactionNo());
+        poJSON = getDetail(deliveryNo).InventoryTransfer().VoidTransaction();
         if ("error".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -823,6 +852,28 @@ public class InventoryStockIssuance extends Transaction {
 
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, getMaster().getTransactionNo());
 
+        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
+            Model_Cluster_Delivery_Detail loDetail = (Model_Cluster_Delivery_Detail) paDetail.get(lnCtr);
+            if (loDetail.getReferNo() != null
+                    && !loDetail.getReferNo().isEmpty()) {
+
+                if (!loDetail.InventoryTransfer().getMaster()
+                        .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr + 1);
+                    return poJSON;
+                }
+                poJSON = VoidTransactionDelivery(lnCtr + 1);
+
+                if ("error".equals((String) poJSON.get("result"))) {
+                    if (((String) poJSON.get("message")).contains("already")) {
+                        poJSON = new JSONObject();
+                        poJSON.put("result", "success");
+                    }
+                }
+
+            }
+        }
         poJSON = statusChange(poMaster.getTable(),
                 (String) poMaster.getValue("sTransNox"),
                 "VoidTransaction",
@@ -1746,6 +1797,7 @@ public class InventoryStockIssuance extends Transaction {
                     ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
                     poJSON.put("result", "error");
                     poJSON.put("message", "User is not an authorized approving officer..");
+                    setApproving("");
                     return poJSON;
                 }
             } //needs authorization thru authorization matrix

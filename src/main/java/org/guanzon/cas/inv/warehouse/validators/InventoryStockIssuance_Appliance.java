@@ -144,12 +144,12 @@ public class InventoryStockIssuance_Appliance implements GValidator {
                     && !paDetail.get(lnCtr).getStockId().isEmpty()) {
                 
                 lnDetailCount++;
-                if (paDetail.get(lnCtr).getQuantity() == null
-                        || paDetail.get(lnCtr).getQuantity() <= 0) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Quantity is not set. Row = " + (lnCtr + 1));
-                    return poJSON;
-                }
+//                if (paDetail.get(lnCtr).getQuantity() == null
+//                        || paDetail.get(lnCtr).getQuantity() <= 0) {
+//                    poJSON.put("result", "error");
+//                    poJSON.put("message", "Quantity is not set. Row = " + (lnCtr + 1));
+//                    return poJSON;
+//                }
                 if (paDetail.get(lnCtr).getSerialID() != null
                         && !paDetail.get(lnCtr).getStockId().isEmpty()) {
                     

@@ -18,8 +18,6 @@ import org.json.simple.JSONObject;
 import org.guanzon.cas.inv.warehouse.status.InventoryStockIssuanceStatus;
 import org.guanzon.cas.inv.warehouse.model.Model_Cluster_Delivery_Detail;
 import org.guanzon.cas.inv.warehouse.model.Model_Cluster_Delivery_Master;
-import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Detail;
-import org.guanzon.cas.inv.warehouse.model.Model_Inventory_Transfer_Master;
 
 /**
  *
@@ -136,16 +134,16 @@ public class InventoryStockClusterIssuance_Monarch implements GValidator {
 //            poJSON.put("message", "Serial is not set.");
 //            return poJSON;
 //        }
-        if (poMaster.getDriverID() == null || poMaster.getDriverID().isEmpty()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Driver is not set.");
-            return poJSON;
-        }
-        if (poMaster.getEmploy01() == null || poMaster.getEmploy01().isEmpty()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Employee 01 is not set.");
-            return poJSON;
-        }
+//        if (poMaster.getDriverID() == null || poMaster.getDriverID().isEmpty()) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Driver is not set.");
+//            return poJSON;
+//        }
+//        if (poMaster.getEmploy01() == null || poMaster.getEmploy01().isEmpty()) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Employee 01 is not set.");
+//            return poJSON;
+//        }
 
         int lnDetailCount = 0;
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
@@ -303,5 +301,4 @@ public class InventoryStockClusterIssuance_Monarch implements GValidator {
 //        poJSON.put("isRequiredApproval", isRequiredApproval);
         return poJSON;
     }
-
 }

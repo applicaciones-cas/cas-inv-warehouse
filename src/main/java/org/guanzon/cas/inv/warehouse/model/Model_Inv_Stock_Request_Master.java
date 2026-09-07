@@ -10,6 +10,8 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.inv.warehouse.status.StockRequestStatus;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Branch_Cluster;
+import org.guanzon.cas.parameter.model.Model_Branch_Others;
 import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
@@ -274,6 +276,7 @@ public class Model_Inv_Stock_Request_Master extends Model {
         }
     }
 
+    //reference object models
     public Model_Industry Industry() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sIndstCdx"))) {
             if (poIndustry.getEditMode() == EditMode.READY

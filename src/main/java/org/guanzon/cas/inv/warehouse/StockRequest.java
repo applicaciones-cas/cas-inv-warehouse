@@ -159,6 +159,8 @@ public class StockRequest extends Transaction {
                 //check if approving officer is authorized
                 String lsUserIDxx = poJSON.get("sUserIDxx").toString();
                 int lnUserLevl = Integer.parseInt(poJSON.get("nUserLevl").toString());
+                
+                setApproving((String) poJSON.get("sUserIDxx"));
                 poJSON = loAuth.isAuthorized(lsUserIDxx, lnUserLevl);
 
                 //if approving is not authorized then do not continue process
@@ -166,10 +168,10 @@ public class StockRequest extends Transaction {
                     ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
                     poJSON.put("result", "error");
                     poJSON.put("message", "User is not an authorized approving officer..");
+                    setApproving("");
                     return poJSON;
                 }
 
-                setApproving((String) poJSON.get("sUserIDxx"));
             } //needs authorization thru authorization matrix
             else {
                 //show process needs authorization through the authority matrix
@@ -684,7 +686,7 @@ public class StockRequest extends Transaction {
 
         return poJSON;
     }
-    
+
     //Added search for project by Arsiela 08-06-2026
     public JSONObject SearchSource(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         String lsReferNo = value;
@@ -695,30 +697,30 @@ public class StockRequest extends Transaction {
             0;000001 -> no project code and but with reference no
             PRJ-00-01 -> with project code but without reference no 
             empty string - no project code and reference no
-        */
-        if(value != null && !"".equals(value)){
+         */
+        if (value != null && !"".equals(value)) {
             int separatorIndex = value.indexOf(';');
             value = separatorIndex >= 0
                     ? value.substring(0, separatorIndex)
                     : value;
-            if("0".equals(value)){
+            if ("0".equals(value)) {
                 value = "";
             }
-            System.out.println("Project Code : "+value);
+            System.out.println("Project Code : " + value);
 
             separatorIndex = lsReferNo.indexOf(';');
             lsReferNo = separatorIndex >= 0
                     ? lsReferNo.substring(separatorIndex + 1)
                     : "";
-            System.out.println("Reference No : "+lsReferNo);
+            System.out.println("Reference No : " + lsReferNo);
         }
-        
+
         Project object = new ParamControllers(poGRider, logwrapr).Project();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            if(lsReferNo != null && !"".equals(lsReferNo)){
-                Master().setReferenceNo(object.getModel().getProjectID()+";"+lsReferNo);
+            if (lsReferNo != null && !"".equals(lsReferNo)) {
+                Master().setReferenceNo(object.getModel().getProjectID() + ";" + lsReferNo);
             } else {
                 Master().setReferenceNo(object.getModel().getProjectID());
             }
@@ -728,8 +730,8 @@ public class StockRequest extends Transaction {
 
         return poJSON;
     }
-    
-    public JSONObject checkProjectCode(String fsValue) throws SQLException, GuanzonException{
+
+    public JSONObject checkProjectCode(String fsValue) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         /*
             sample entries: sir mac 08-21-2026
@@ -737,8 +739,8 @@ public class StockRequest extends Transaction {
             0;000001 -> no project code and but with reference no
             PRJ-00-01 -> with project code but without reference no 
             empty string - no project code and reference no
-        */
-        if(fsValue != null && !"".equals(fsValue)){
+         */
+        if (fsValue != null && !"".equals(fsValue)) {
             int separatorIndex = fsValue.indexOf(';');
             fsValue = separatorIndex >= 0
                     ? fsValue.substring(0, separatorIndex)
@@ -748,12 +750,12 @@ public class StockRequest extends Transaction {
                 poJSON.put("result", "error");
                 return poJSON;
             }
-            if("0".equals(fsValue)){
+            if ("0".equals(fsValue)) {
                 fsValue = "";
             }
-            System.out.println("Project Code : "+fsValue);
-            
-            if(fsValue != null && !"".equals(fsValue)){
+            System.out.println("Project Code : " + fsValue);
+
+            if (fsValue != null && !"".equals(fsValue)) {
                 Project object = new ParamControllers(poGRider, logwrapr).Project();
                 object.setRecordStatus(RecordStatus.ACTIVE);
                 poJSON = object.openRecord(fsValue);
@@ -765,7 +767,7 @@ public class StockRequest extends Transaction {
             }
 
         }
-    
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         return poJSON;
@@ -908,7 +910,7 @@ public class StockRequest extends Transaction {
         object.setIndustryID(lsIndustry);
         object.setBranchCode(poGRider.getBranchCode());
 
-        poJSON = object.searchRecord(value, byCode, 
+        poJSON = object.searchRecord(value, byCode,
                 psIndustryCode, brandId, false);
 
         if ("success".equals((String) poJSON.get("result"))) {
@@ -1636,6 +1638,8 @@ public class StockRequest extends Transaction {
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(Master().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", Master().getRemarks());
         poReportJasper.addParameter("DatePrinted", SQLUtil.dateFormat(poGRider.getServerDate(), SQLUtil.FORMAT_TIMESTAMP));
+        poReportJasper.addParameter("ProjectCode", Master().getReferenceNo() == null ? "" : Master().getReferenceNo());
+
         if ("1".equals(Master().getPrintStatus())) {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\reprint.png");
         } else {
