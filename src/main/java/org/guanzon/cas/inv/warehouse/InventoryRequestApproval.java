@@ -207,6 +207,44 @@ public class InventoryRequestApproval extends Transaction {
 
     }
 
+    public JSONObject RetrieveRecord(String transactionNo) throws SQLException, GuanzonException {
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, "sTransNox =" + SQLUtil.toSQL(transactionNo));
+
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record found.");
+            return poJSON;
+        }
+
+        loRS.first();
+        psIndustryCode = loRS.getString("sIndstCdx");
+        poJSON = new JSONObject();
+        BranchCluster loSubClass = new ParamControllers(poGRider, logwrapr).BranchCluster();
+
+        if (psIndustryCode == null && "".equals(psIndustryCode)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Industry is not set.");
+            return poJSON;
+        }
+
+        loSubClass.getModel().setIndustryCode(psIndustryCode);
+        
+        if (loRS.getString("sClustrID") != null) {
+            poJSON = loSubClass.openRecord(loRS.getString("sClustrID"), poGRider.getIndustry());
+            if ("success".equals((String) poJSON.get("result"))) {
+                poCluster = loSubClass.getModel();
+
+                poJSON = new JSONObject();
+                poJSON.put("result", "success");
+                return poJSON;
+            }
+            poJSON.put("result", "success");
+            return poJSON;
+        }
+        return poJSON;
+    }
+
     public JSONObject loadTransactionList()
             throws SQLException, GuanzonException, CloneNotSupportedException {
         if (poCluster == null) {
@@ -361,6 +399,8 @@ public class InventoryRequestApproval extends Transaction {
         poReportJasper.addParameter("TransactionNo", getMaster().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(getMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", getMaster().getRemarks());
+        poReportJasper.addParameter("ProjectCode", getMaster().getReferenceNo() == null ? "" : getMaster().getReferenceNo());
+
         poReportJasper.addParameter("DatePrinted", SQLUtil.dateFormat(poGRider.getServerDate(), SQLUtil.FORMAT_TIMESTAMP));
         if ("1".equals(getMaster().getProcessed()) && !StockRequestStatus.PROCESSED.equals(getMaster().getTransactionStatus())) {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\approvedreprint.png");
@@ -379,7 +419,7 @@ public class InventoryRequestApproval extends Transaction {
         lsPreparedByDate = dModified.format(formatter);
 
         poReportJasper.addParameter("PrepNme", lsPreparedBy + " - " + lsPreparedByDate);
-        
+
         poReportJasper.setReportName("Inventory Request Approval");
         poReportJasper.setJasperPath(getJasperReport());
 

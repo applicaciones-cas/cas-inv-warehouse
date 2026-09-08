@@ -134,16 +134,16 @@ public class InventoryStockClusterIssuance_Appliance implements GValidator {
 //            poJSON.put("message", "Serial is not set.");
 //            return poJSON;
 //        }
-        if (poMaster.getDriverID() == null || poMaster.getDriverID().isEmpty()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Driver is not set.");
-            return poJSON;
-        }
-        if (poMaster.getEmploy01() == null || poMaster.getEmploy01().isEmpty()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Employee 01 is not set.");
-            return poJSON;
-        }
+//        if (poMaster.getDriverID() == null || poMaster.getDriverID().isEmpty()) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Driver is not set.");
+//            return poJSON;
+//        }
+//        if (poMaster.getEmploy01() == null || poMaster.getEmploy01().isEmpty()) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Employee 01 is not set.");
+//            return poJSON;
+//        }
 
         int lnDetailCount = 0;
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
@@ -196,7 +196,7 @@ public class InventoryStockClusterIssuance_Appliance implements GValidator {
                 if (paDetail.get(lnCtr).InventoryTransfer().getMaster()
                         .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Unprinted delivery Detected. Row =" + lnCtr);
+                    poJSON.put("message", "Unprinted delivery Detected. Row =" + lnCtr+1);
                     return poJSON;
                 }
                 lnDetailCount++;
@@ -265,7 +265,7 @@ public class InventoryStockClusterIssuance_Appliance implements GValidator {
                 if (!paDetail.get(lnCtr).InventoryTransfer().getMaster()
                         .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr);
+                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr+1);
                     return poJSON;
                 }
 
@@ -276,7 +276,7 @@ public class InventoryStockClusterIssuance_Appliance implements GValidator {
         return poJSON;
     }
 
-private JSONObject validateVoid() throws SQLException, GuanzonException, CloneNotSupportedException {
+   private JSONObject validateVoid() throws SQLException, GuanzonException, CloneNotSupportedException {
         boolean isRequiredApproval = false;
         poJSON = new JSONObject();
 
@@ -291,7 +291,7 @@ private JSONObject validateVoid() throws SQLException, GuanzonException, CloneNo
                 if (!paDetail.get(lnCtr).InventoryTransfer().getMaster()
                         .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr);
+                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr+1);
                     return poJSON;
                 }
 

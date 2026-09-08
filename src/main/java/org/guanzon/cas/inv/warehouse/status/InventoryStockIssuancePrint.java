@@ -35,6 +35,7 @@ public class InventoryStockIssuancePrint {
                 + ",  IFNULL(InventoryType.sDescript,'') InventoryTypeName"
                 + ",  IFNULL(Variant.sDescript,'') VariantName"
                 + ",  InventoryTransferDetail.nQuantity nQuantity"
+                + ",  InventoryTransferDetail.nInvCostx nInvCostx"
                 + "   FROM Inv_Transfer_Master InventoryTransferMaster"
                 + "     LEFT JOIN Inv_Transfer_Detail InventoryTransferDetail"
                 + "         ON InventoryTransferMaster.sTransNox = InventoryTransferDetail.sTransNox"
