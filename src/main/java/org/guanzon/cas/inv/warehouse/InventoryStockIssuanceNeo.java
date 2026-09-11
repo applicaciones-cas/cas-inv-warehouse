@@ -619,7 +619,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         Model_Inv_Stock_Request_Detail loStockDetail = loDetail.InventoryStockRequest();
         if (loStockDetail.getEditMode() == EditMode.READY) {
             loStockDetail.updateRecord();
-            loStockDetail.setIssued(loDetail.getQuantity());
+            loStockDetail.setIssued(loStockDetail.getIssued() + loDetail.getQuantity());
             poJSON = loStockDetail.saveRecord();
 
             if (!"success".equals((String) poJSON.get("result"))) {
@@ -2329,7 +2329,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
         if (MiscUtil.RecordCount(loRS) > 0L) {
             if (loRS.next()) {
                 if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
-                    lsConfirmedBy = poGRider.Decrypt(loRS.getString("sModified")) == null ? "" : getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
+                    lsConfirmedBy = poGRider.Decrypt(loRS.getString("sModified")) == null ? "" : poGRider.Decrypt(loRS.getString("sModified"));
                     LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
                     lsConfirmedDate = dModified.format(formatter);
@@ -2536,7 +2536,7 @@ public class InventoryStockIssuanceNeo extends Transaction {
                 String lsUserIDxx = poJSON.get("sUserIDxx").toString();
                 int lnUserLevl = Integer.parseInt(poJSON.get("nUserLevl").toString());
                 poJSON = loAuth.isAuthorized(lsUserIDxx, lnUserLevl);
-
+                
                 //if approving is not authorized then do not continue process
                 if (!((String) poJSON.get("result")).equalsIgnoreCase("true")) {
                     ShowMessageFX.Warning((String) poJSON.get("warning"), "Authorization Required", null);
@@ -3435,6 +3435,24 @@ public class InventoryStockIssuanceNeo extends Transaction {
         }
 
         poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    public JSONObject clearOrder() {
+        if (getEditMode() != EditMode.ADDNEW) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Edit Mode.");
+            return poJSON;
+        }
+
+        getMaster().setOrderNo("");
+        paDetail.removeAll(paDetail);
+        Model_Inventory_Transfer_Detail newDetail = new DeliveryIssuanceModels(poGRider).InventoryTransferDetail();
+        newDetail.newRecord();
+        newDetail.setTransactionNo(getMaster().getTransactionNo());
+        newDetail.setEntryNo(1);
+        paDetail.add(newDetail);
         poJSON.put("result", "success");
         return poJSON;
     }

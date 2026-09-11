@@ -176,9 +176,9 @@ public class StockRequest_General implements GValidator {
         boolean isRequiredApproval = false;
 
         poJSON = new JSONObject();
-        if (poGrider.getUserLevel() <= UserRight.ENCODER) {
-            isRequiredApproval = true;
-        }
+//        if (poGrider.getUserLevel() <= UserRight.ENCODER) {
+//            isRequiredApproval = true;
+//        }
         poJSON.put("result", "success");
         poJSON.put("isRequiredApproval", isRequiredApproval);
 

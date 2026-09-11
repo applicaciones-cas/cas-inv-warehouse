@@ -288,8 +288,15 @@ public class InventoryStockClusterIssuance_MP implements GValidator {
             if (paDetail.get(lnCtr).getReferNo() != null
                     && !paDetail.get(lnCtr).getReferNo().isEmpty()) {
 
-                if (!paDetail.get(lnCtr).InventoryTransfer().getMaster()
-                        .getTransactionStatus().equals(InventoryStockIssuanceStatus.OPEN)) {
+                if (paDetail.get(lnCtr).InventoryTransfer().getMaster()
+                        .getTransactionStatus().equals(InventoryStockIssuanceStatus.CONFIRMED)) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr+1);
+                    return poJSON;
+                }
+                
+                if (paDetail.get(lnCtr).InventoryTransfer().getMaster()
+                        .getTransactionStatus().equals(InventoryStockIssuanceStatus.POSTED)) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Cofirmed delivery Detected. Row =" + lnCtr+1);
                     return poJSON;
