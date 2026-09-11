@@ -400,7 +400,7 @@ public class InventoryStockIssuance extends Transaction {
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject loJSON = new JSONObject();
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
-            poJSON = SaveTransactionDelivery(lnCtr + 1);
+            poJSON = SaveTransactionDelivery(lnCtr + 1, true);
             if ("error".equals((String) poJSON.get("result"))) {
                 if (((String) poJSON.get("message")).contains("unmodified")) {
                     poJSON = new JSONObject();
@@ -415,7 +415,7 @@ public class InventoryStockIssuance extends Transaction {
         return poJSON;
     }
 
-    public JSONObject SaveTransactionDelivery(int deliveryNo) throws SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject SaveTransactionDelivery(int deliveryNo, boolean fbBegin) throws SQLException, GuanzonException, CloneNotSupportedException {
 
         poJSON = willSave();
         if ("error".equals((String) poJSON.get("result"))) {
@@ -423,10 +423,13 @@ public class InventoryStockIssuance extends Transaction {
         }
 
         System.out.println(getDetail(deliveryNo).InventoryTransfer().getMaster().getTransactionNo());
-        if (getDetail(deliveryNo).InventoryTransfer().getEditMode() == EditMode.ADDNEW) {
-            poGRider.beginTrans("ADD NEW", "Inv_Transfer_Master", SOURCE_CODE, getMaster().getTransactionNo());
-        } else {
-            poGRider.beginTrans("UPDATE STATUS", "Inv_Transfer_Master", SOURCE_CODE, getMaster().getTransactionNo());
+
+        if (fbBegin) {
+            if (getDetail(deliveryNo).InventoryTransfer().getEditMode() == EditMode.ADDNEW) {
+                poGRider.beginTrans("ADD NEW", "Inv_Transfer_Master", SOURCE_CODE, getMaster().getTransactionNo());
+            } else {
+                poGRider.beginTrans("UPDATE STATUS", "Inv_Transfer_Master", SOURCE_CODE, getMaster().getTransactionNo());
+            }
         }
         getDetail(deliveryNo).InventoryTransfer().setWithParent(true);
         computeTotal(deliveryNo);
@@ -440,18 +443,27 @@ public class InventoryStockIssuance extends Transaction {
                 return poJSON;
             }
         }
-        //commit existing 
-        poGRider.commitTrans();
-
+        if (fbBegin) {
+            poGRider.commitTrans();
+        }
+//        updateTransaction();
         poJSON = saveTransaction();
         if (!"error".equals((String) poJSON.get("result"))) {
-            poJSON.put("result", "success");
+
             OpenTransaction((String) poMaster.getValue("sTransNox"));
             UpdateTransaction();
+            poJSON.put("result", "success");
+
+            return poJSON;
+        } else if (((String) poJSON.get("message")).contains("unmodified")) {
+
+            poJSON = new JSONObject();
+            poJSON.put("result", "success");
+            return poJSON;
+        } else {
+            poGRider.rollbackTrans();
             return poJSON;
         }
-
-        return poJSON;
     }
 
     private void computeTotal(int deliveryNo) throws SQLException, GuanzonException, CloneNotSupportedException {
@@ -497,8 +509,7 @@ public class InventoryStockIssuance extends Transaction {
 
     public JSONObject VoidTransactionDelivery(int deliveryNo) throws SQLException, GuanzonException, CloneNotSupportedException {
 
-        poGRider.beginTrans("VOID STATUS", "Void Transaction", SOURCE_CODE, getMaster().getTransactionNo());
-
+//        poGRider.beginTrans("VOID STATUS", "Void Transaction", SOURCE_CODE, getMaster().getTransactionNo());
         System.out.println(getDetail(deliveryNo).InventoryTransfer().getMaster().getTransactionNo());
         poJSON = getDetail(deliveryNo).InventoryTransfer().VoidTransaction();
         if ("error".equals((String) poJSON.get("result"))) {
@@ -506,14 +517,22 @@ public class InventoryStockIssuance extends Transaction {
             return poJSON;
         }
 
-        poGRider.commitTrans();
+//        poGRider.commitTrans();
         getDetail(deliveryNo).setCancelled("1");
         getDetail(deliveryNo).setCancelledDate(poGRider.getServerDate());
-        poJSON = SaveTransaction();
+        poJSON = SaveTransactionDelivery(deliveryNo, false);
+        if ("error".equals((String) poJSON.get("result"))) {
+            if (((String) poJSON.get("message")).contains("unmodified")) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "success");
+            }
+            return poJSON;
+
+        }
         if (!"error".equals((String) poJSON.get("result"))) {
             poJSON.put("result", "success");
-            OpenTransaction((String) poMaster.getValue("sTransNox"));
-            UpdateTransaction();
+//            OpenTransaction((String) poMaster.getValue("sTransNox"));
+//            UpdateTransaction();
             if ("error".equals((String) poJSON.get("result"))) {
                 if (((String) poJSON.get("message")).contains("already")) {
                     poJSON = new JSONObject();
@@ -852,6 +871,15 @@ public class InventoryStockIssuance extends Transaction {
 
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, getMaster().getTransactionNo());
 
+        poJSON = statusChange(poMaster.getTable(),
+                (String) poMaster.getValue("sTransNox"),
+                "VoidTransaction",
+                InventoryStockIssuanceStatus.VOID,
+                false, true);
+        if ("error".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
             Model_Cluster_Delivery_Detail loDetail = (Model_Cluster_Delivery_Detail) paDetail.get(lnCtr);
             if (loDetail.getReferNo() != null
@@ -873,15 +901,6 @@ public class InventoryStockIssuance extends Transaction {
                 }
 
             }
-        }
-        poJSON = statusChange(poMaster.getTable(),
-                (String) poMaster.getValue("sTransNox"),
-                "VoidTransaction",
-                InventoryStockIssuanceStatus.VOID,
-                false, true);
-        if ("error".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
         }
 
         poGRider.commitTrans();
